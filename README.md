@@ -206,8 +206,8 @@ gdzie w programie przyjęto $\varepsilon = 10^{-15}$.
 Typy funkcji są zdefiniowane w pliku `common/Types.h`.
 
 ```cpp
-using RealFn = function<long double(long double)>;
-using IntervalFn = function<Interval<mpreal>(Interval<mpreal>)>;
+using RealFn = std::function<long double(long double)>;
+using IntervalFn = std::function<Interval<mpreal>(Interval<mpreal>)>;
 
 typedef long double (*FnPtr)(long double);
 typedef void (*IVFnPtr)(long double, long double, long double*, long double*);
@@ -297,7 +297,6 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 
         long double xn;
         if (disc < 0.0L) {
-            // Fall back to plain Newton instead of stopping
             out.Add("  disc<0 at iter " + to_string(i+1) + ", using Newton fallback");
             if (fabsl(dfx) < 1e-20L) { out.Add("Error: f'(x)=0 too"); return; }
             xn = x - fx / dfx;
@@ -312,15 +311,15 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
-           << ": x=" << fixed << setprecision(10) << (double)xn
-           << "  step=" << scientific << setprecision(2) << (double)step;
+           << ": x=" << fixed << setprecision(10) << xn
+           << "  step=" << scientific << setprecision(2) << step;
         out.Add(ss.str());
 
         x = xn;
 
         if (step < 1e-15L || step / max(fabsl(x), 1.0L) < 1e-15L) {
             ostringstream root;
-            root << fixed << setprecision(20) << (double)x;
+            root << fixed << setprecision(20) << x;
             out.Add("--- Roots: ---");
             out.Add("Root: " + root.str());
             return;
@@ -362,10 +361,10 @@ Powtarzalne operacje zostały wydzielone do funkcji pomocniczych:
 Najważniejszy fragment:
 
 ```cpp
-Interval<mpreal> disc = dfx * dfx - two * fm * ddfx;
+Interval<mpreal> disc = dfm * dfm - two * fm * ddfx;
 
 if (disc.b < mpreal(0)) {
-    Interval<mpreal> xn = m - fm / dfx;
+    Interval<mpreal> xn = m - fm / dfm;
     mpreal na = max(xn.a, x.a);
     mpreal nb = min(xn.b, x.b);
 

@@ -54,7 +54,6 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 
         long double xn;
         if (disc < 0.0L) {
-            // Fall back to plain Newton instead of stopping
             out.Add("  disc<0 at iter " + to_string(i+1) + ", using Newton fallback");
             if (fabsl(dfx) < 1e-20L) { out.Add("Error: f'(x)=0 too"); return; }
             xn = x - fx / dfx;
@@ -69,15 +68,15 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
-           << ": x=" << fixed << setprecision(10) << (double)xn
-           << "  step=" << scientific << setprecision(2) << (double)step;
+           << ": x=" << fixed << setprecision(10) << xn
+           << "  step=" << scientific << setprecision(2) << step;
         out.Add(ss.str());
 
         x = xn;
 
         if (step < 1e-15L || step / max(fabsl(x), 1.0L) < 1e-15L) {
             ostringstream root;
-            root << fixed << setprecision(20) << (double)x;
+            root << fixed << setprecision(20) << x;
             out.Add("--- Roots: ---");
             out.Add("Root: " + root.str());
             return;
@@ -117,7 +116,7 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0, IntervalFn f, IntervalFn df, 
             Interval<mpreal> m(mid_val, mid_val);
 
             Interval<mpreal> fm   = f(m);
-            Interval<mpreal> dfx  = df(m);
+            Interval<mpreal> dfm  = df(m);
             Interval<mpreal> ddfx = ddf(x);
 
             if (ContainsZero(ddfx)) {
@@ -125,19 +124,17 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0, IntervalFn f, IntervalFn df, 
                 done = true; break;
             }
 
-            if (ContainsZero(dfx)) {
+            if (ContainsZero(dfm)) {
                 BisectWithLog(queue, x, mid_val, depth, "f'=0", out);
                 done = true; break;
             }
 
-            Interval<mpreal> disc = dfx * dfx - two * fm * ddfx;
+            Interval<mpreal> disc = dfm * dfm - two * fm * ddfx;
 
             if (disc.b < mpreal(0)) {
-                // Fall back to plain interval Newton instead of discarding
-                Interval<mpreal> xn = m - fm / dfx;
+                Interval<mpreal> xn = m - fm / dfm;
                 mpreal na = max(xn.a, x.a), nb = min(xn.b, x.b);
                 if (na > nb) {
-                    // bisect as last resort
                     BisectWithLog(queue, x, mid_val, depth, "disc<0", out);
                     done = true; break;
                 }
@@ -149,8 +146,8 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0, IntervalFn f, IntervalFn df, 
             Interval<mpreal> disc_clipped(max(disc.a, mpreal(0)), disc.b);
             Interval<mpreal> sp = ISqrt(disc_clipped, st);
 
-            Interval<mpreal> x1 = m - (dfx - sp) / ddfx;
-            Interval<mpreal> x2 = m - (dfx + sp) / ddfx;
+            Interval<mpreal> x1 = m - (dfm - sp) / ddfx;
+            Interval<mpreal> x2 = m - (dfm + sp) / ddfx;
 
             mpreal a1 = max(x1.a, x.a), b1 = min(x1.b, x.b);
             mpreal a2 = max(x2.a, x.a), b2 = min(x2.b, x.b);
