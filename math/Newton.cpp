@@ -36,7 +36,14 @@ namespace {
     }
 }
 
-void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, OutputBox& out, const int MAX_ITER) {
+void runNewtonRaphsonReal(long double x0, 
+                          RealFn f,
+                          RealFn df, 
+                          RealFn ddf, 
+                          OutputBox& out, 
+                          const int MAX_ITER,
+                          long double epsilon) 
+{
     out.Clear();
     long double x = x0;
 
@@ -45,7 +52,7 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
         long double dfx  = df(x);
         long double ddfx = ddf(x);
 
-        if (fabsl(ddfx) < 1e-20L) {
+        if (fabsl(ddfx) < epsilon) {
             out.Add("Error: f''(x) = 0, cannot apply NR2");
             return;
         }
@@ -55,7 +62,7 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
         long double xn;
         if (disc < 0.0L) {
             out.Add("  disc<0 at iter " + to_string(i+1) + ", using Newton fallback");
-            if (fabsl(dfx) < 1e-20L) { out.Add("Error: f'(x)=0 too"); return; }
+            if (fabsl(dfx) < epsilon) { out.Add("Error: f'(x)=0 too"); return; }
             xn = x - fx / dfx;
         } else {
             long double sp = sqrtl(disc);
@@ -74,9 +81,9 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 
         x = xn;
 
-        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < 1e-15L) {
+        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < epsilon) {
             ostringstream root;
-            root << fixed << setprecision(20) << x;
+            root << scientific << setprecision(20) << x;
             out.Add("--- Roots: ---");
             out.Add("Root: " + root.str());
             return;
@@ -86,7 +93,15 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 }
 
 
-void runNewtonRaphsonInterval(Interval<mpreal> x0, IntervalFn f, IntervalFn df, IntervalFn ddf, OutputBox& out, const int MAX_ITER, const int MAX_DEPTH) {
+void runNewtonRaphsonInterval(Interval<mpreal> x0, 
+                              IntervalFn f, 
+                              IntervalFn df, 
+                              IntervalFn ddf, 
+                              OutputBox& out, 
+                              const int MAX_ITER, 
+                              const int MAX_DEPTH,
+                              long double epsilon) 
+{
     out.Clear();
     vector<SubInterval> queue = {{ x0, 0 }};
     vector<Interval<mpreal>> roots;
@@ -176,7 +191,7 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0, IntervalFn f, IntervalFn df, 
                << " w=" << scientific << setprecision(2) << xi.GetWidth();
             out.Add(ss.str());
 
-            if (xi.GetWidth() < mpreal("1e-15")) {
+            if (xi.GetWidth() < mpreal(epsilon)) {
                 roots.push_back(xi);
                 done = true; break;
             }
@@ -200,7 +215,18 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0, IntervalFn f, IntervalFn df, 
 }
 
 
-void runNewtonRaphsonFromPoint(long double x0, RealFn f, RealFn df, RealFn ddf, IntervalFn fi, IntervalFn dfi, IntervalFn ddfi, OutputBox& out, const int MAX_ITER, const int MAX_DEPTH) {
+void runNewtonRaphsonFromPoint(long double x0, 
+                               RealFn f, 
+                               RealFn df, 
+                               RealFn ddf, 
+                               IntervalFn fi, 
+                               IntervalFn dfi, 
+                               IntervalFn ddfi, 
+                               OutputBox& out, 
+                               const int MAX_ITER, 
+                               const int MAX_DEPTH,
+                               long double epsilon) 
+{
     out.Clear();
     long double x = x0;
 
@@ -209,7 +235,7 @@ void runNewtonRaphsonFromPoint(long double x0, RealFn f, RealFn df, RealFn ddf, 
         long double dfx  = df(x);
         long double ddfx = ddf(x);
 
-        if (fabsl(ddfx) < 1e-20L) {
+        if (fabsl(ddfx) < epsilon) {
             out.Add("f''(x) = 0, stopping phase 1");
             break;
         }
@@ -220,7 +246,7 @@ void runNewtonRaphsonFromPoint(long double x0, RealFn f, RealFn df, RealFn ddf, 
         if (disc < 0.0L) {
             // Newton fallback instead of stopping
             out.Add("  disc<0 at iter " + to_string(i+1) + ", Newton fallback");
-            if (fabsl(dfx) < 1e-20L) { out.Add("f'=0 too, stopping"); break; }
+            if (fabsl(dfx) < epsilon) { out.Add("f'=0 too, stopping"); break; }
             xn = x - fx / dfx;
         } else {
             long double sp = sqrtl(disc);
@@ -234,17 +260,17 @@ void runNewtonRaphsonFromPoint(long double x0, RealFn f, RealFn df, RealFn ddf, 
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i+1
-           << ": x=" << fixed << setprecision(15) << (double)x
-           << "  step=" << scientific << setprecision(2) << (double)step;
+           << ": x=" << fixed << setprecision(15) << x
+           << "  step=" << scientific << setprecision(2) << step;
         out.Add(ss.str());
 
-        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < 1e-15L) break;
+        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < epsilon) break;
     }
 
     out.Add("Approximate root: x^ = " + to_string(x));
 
     mpreal xm(x);
-    mpreal delta("1e-10");
+    mpreal delta(epsilon);
     Interval<mpreal> bracket;
     bool found = false;
 
@@ -262,5 +288,5 @@ void runNewtonRaphsonFromPoint(long double x0, RealFn f, RealFn df, RealFn ddf, 
 
     if (!found) { out.Add("Could not bracket root."); return; }
 
-    runNewtonRaphsonInterval(bracket, fi, dfi, ddfi, out, MAX_ITER, MAX_DEPTH);
+    runNewtonRaphsonInterval(bracket, fi, dfi, ddfi, out, MAX_ITER, MAX_DEPTH, epsilon);
 }

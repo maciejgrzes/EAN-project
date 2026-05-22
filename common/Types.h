@@ -13,6 +13,3 @@ using IntervalFn = std::function<Interval<mpreal>(Interval<mpreal>)>;
 
 typedef long double (*FnPtr)(long double);
 typedef void (*IVFnPtr)(long double, long double, long double*, long double*);
-
-const int MAX_ITER = 100;
-const int MAX_DEPTH = 50;

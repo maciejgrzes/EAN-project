@@ -8,7 +8,6 @@ struct InputBox {
     std::string value;
     bool focused = false;
     int maxLength;
-    std::string hint;
 
     float backspaceTimer = 0.0f;
     const float backspaceDelay  = 0.5f;
@@ -16,5 +15,5 @@ struct InputBox {
 
     std::string PushValue();
     void Update();
-    void Draw() const;
+    void Draw(std::string name) const;
 };

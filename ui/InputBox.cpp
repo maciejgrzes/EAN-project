@@ -32,8 +32,8 @@ void InputBox::Update() {
     }
 }
 
-void InputBox::Draw() const {
-    DrawText(("Input:   Hint: " + hint).c_str(), bounds.x, bounds.y - 30, 20, WHITE);
+void InputBox::Draw(std::string name) const {
+    DrawText(name.c_str(), bounds.x, bounds.y - 30, 20, WHITE);
     DrawRectangleRec(bounds, RAYWHITE);
     DrawRectangleLinesEx(bounds, 2, focused ? BLUE : GRAY);
 

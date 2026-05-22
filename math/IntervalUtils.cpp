@@ -6,6 +6,7 @@
 #include <string>
 
 Interval<mpreal> ParseInterval(const string& input) {
+    Interval<mpreal> I;
     string s = input;
     s.erase(remove(s.begin(), s.end(), ' '), s.end());
     if (s.empty()) throw runtime_error("no input given");
@@ -20,14 +21,14 @@ Interval<mpreal> ParseInterval(const string& input) {
         string right = s.substr(comma + 1);
 
 
-        Interval<mpreal> lo = IntRead<mpreal>(left);
-        Interval<mpreal> hi = IntRead<mpreal>(right);
+        I.a = LeftRead<mpreal>(left);
+        I.b = RightRead<mpreal>(right);
 
-        if (lo.a > hi.b) throw runtime_error("lower bound is greater than upper bound");
+        if (I.a > I.b) throw runtime_error("lower bound is greater than upper bound");
 
-        return Interval<mpreal>(lo.a, hi.b);
+        return I;
     } else {
-        return IntRead<mpreal>(s);
+        return I;
     }
 }
 
