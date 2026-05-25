@@ -13,7 +13,7 @@ void runNewtonRaphsonReal(
         long double epsilon);
 
 void runNewtonRaphsonInterval(
-        Interval<mpreal> x0, 
+        Interval<long double> x0, 
         IntervalFn f, 
         IntervalFn df, 
         IntervalFn ddf, 

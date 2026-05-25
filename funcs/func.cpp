@@ -9,13 +9,13 @@ extern "C" {
     long double ddf(long double x) { return 2.0L; }
 
     void f_iv  (long double a, long double b, long double* ra, long double* rb) { 
-        Interval<mpreal> r = Interval<mpreal>(mpreal(a),mpreal(b)) * Interval<mpreal>(mpreal(a),mpreal(b)) - IntRead<mpreal>("2");
+        Interval<long double> r = Interval<long double>(a, b) * Interval<long double>(a, b) - IntRead<long double>("2");
         *ra=(long double)r.a;
         *rb=(long double)r.b; 
     }
 
     void df_iv (long double a, long double b, long double* ra, long double* rb) { 
-        Interval<mpreal> r = IntRead<mpreal>("2") * Interval<mpreal>(mpreal(a),mpreal(b));
+        Interval<long double> r = IntRead<long double>("2") * Interval<long double>(a, b);
         *ra=(long double)r.a; 
         *rb=(long double)r.b; 
     }

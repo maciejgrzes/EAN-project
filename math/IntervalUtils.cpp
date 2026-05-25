@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <string>
 
-Interval<mpreal> ParseInterval(const string& input) {
-    Interval<mpreal> I;
+Interval<long double> ParseInterval(const string& input) {
+    Interval<long double> I;
     string s = input;
     s.erase(remove(s.begin(), s.end(), ' '), s.end());
     if (s.empty()) throw runtime_error("no input given");
@@ -20,9 +20,8 @@ Interval<mpreal> ParseInterval(const string& input) {
         string left  = s.substr(0, comma);
         string right = s.substr(comma + 1);
 
-
-        I.a = LeftRead<mpreal>(left);
-        I.b = RightRead<mpreal>(right);
+        I.a = LeftRead<long double>(left);
+        I.b = RightRead<long double>(right);
 
         if (I.a > I.b) throw runtime_error("lower bound is greater than upper bound");
 
@@ -55,10 +54,10 @@ bool loadFunctions(const string& path, RealFn& f, RealFn& df, RealFn& ddf, Inter
     ddf = pddf;
 
     auto wrap = [](IVFnPtr fn) {
-        return [fn](Interval<mpreal> x) -> Interval<mpreal> {
+        return [fn](Interval<long double> x) -> Interval<long double> {
             long double ra, rb;
             fn((long double)x.a, (long double)x.b, &ra, &rb);
-            return Interval<mpreal>(mpreal(ra), mpreal(rb));
+            return Interval<long double>(ra, rb);
         };
     };
 

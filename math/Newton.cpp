@@ -10,28 +10,28 @@ using namespace std;
 
 namespace {
     struct SubInterval {
-        Interval<mpreal> x;
+        Interval<long double> x;
         int depth;
     };
 
-    string FormatInterval(Interval<mpreal> x) {
+    string FormatInterval(Interval<long double> x) {
         string lo, hi;
         x.IEndsToStrings(lo, hi);
         return "[" + lo + ", " + hi + "]";
     }
 
-    void PushBisection(vector<SubInterval>& queue, Interval<mpreal> x, mpreal mid, int depth) {
-        queue.push_back({ Interval<mpreal>(mid, x.b), depth + 1 });
-        queue.push_back({ Interval<mpreal>(x.a, mid), depth + 1 });
+    void PushBisection(vector<SubInterval>& queue, Interval<long double> x, long double mid, int depth) {
+        queue.push_back({ Interval<long double>(mid, x.b), depth + 1 });
+        queue.push_back({ Interval<long double>(x.a, mid), depth + 1 });
     }
 
-    void BisectWithLog(vector<SubInterval>& queue, Interval<mpreal> x, mpreal mid, int depth, const string& reason, OutputBox& out) {
+    void BisectWithLog(vector<SubInterval>& queue, Interval<long double> x, long double mid, int depth, const string& reason, OutputBox& out) {
         PushBisection(queue, x, mid, depth);
         out.Add("Bisect (" + reason + ") " + FormatInterval(x) + " depth=" + to_string(depth));
     }
 
-    void StoreOrQueue(Interval<mpreal> x, vector<Interval<mpreal>>& roots, vector<SubInterval>& queue, int depth) {
-        if (x.GetWidth() < mpreal("1e-15")) roots.push_back(x);
+    void StoreOrQueue(Interval<long double> x, vector<Interval<long double>>& roots, vector<SubInterval>& queue, int depth, long double eps) {
+        if (x.GetWidth() < eps) roots.push_back(x);
         else queue.push_back({ x, depth + 1 });
     }
 }
@@ -93,7 +93,7 @@ void runNewtonRaphsonReal(long double x0,
 }
 
 
-void runNewtonRaphsonInterval(Interval<mpreal> x0, 
+void runNewtonRaphsonInterval(Interval<long double> x0, 
                               IntervalFn f, 
                               IntervalFn df, 
                               IntervalFn ddf, 
@@ -104,17 +104,17 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0,
 {
     out.Clear();
     vector<SubInterval> queue = {{ x0, 0 }};
-    vector<Interval<mpreal>> roots;
-    vector<Interval<mpreal>> depthLimited;
+    vector<Interval<long double>> roots;
+    vector<Interval<long double>> depthLimited;
 
-    const Interval<mpreal> two(mpreal(2), mpreal(2));
+    const Interval<long double> two = IntRead<long double>("2");
 
     while (!queue.empty()) {
         auto [x, depth] = queue.back();
         queue.pop_back();
 
-        Interval<mpreal> fx = f(x);
-        if (fx.a > mpreal(0) || fx.b < mpreal(0)) {
+        Interval<long double> fx = f(x);
+        if (fx.a > 0.0L || fx.b < 0.0L) {
             out.Add("Skip " + FormatInterval(x) + ": f doesn't contain 0");
             continue;
         }
@@ -127,12 +127,12 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0,
 
         bool done = false;
         for (int i = 0; i < MAX_ITER; i++) {
-            mpreal mid_val = x.Mid();
-            Interval<mpreal> m(mid_val, mid_val);
+            long double mid_val = x.Mid();
+            Interval<long double> m(mid_val, mid_val);
 
-            Interval<mpreal> fm   = f(m);
-            Interval<mpreal> dfm  = df(m);
-            Interval<mpreal> ddfx = ddf(x);
+            Interval<long double> fm   = f(m);
+            Interval<long double> dfm  = df(m);
+            Interval<long double> ddfx = ddf(x);
 
             if (ContainsZero(ddfx)) {
                 BisectWithLog(queue, x, mid_val, depth, "f''=0", out);
@@ -144,28 +144,29 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0,
                 done = true; break;
             }
 
-            Interval<mpreal> disc = dfm * dfm - two * fm * ddfx;
+            Interval<long double> disc = dfm * dfm - two * fm * ddfx;
 
-            if (disc.b < mpreal(0)) {
-                Interval<mpreal> xn = m - fm / dfm;
-                mpreal na = max(xn.a, x.a), nb = min(xn.b, x.b);
+            if (disc.b < 0.0L) {
+                Interval<long double> xn = m - fm / dfm;
+                long double na = max(xn.a, x.a), nb = min(xn.b, x.b);
                 if (na > nb) {
                     BisectWithLog(queue, x, mid_val, depth, "disc<0", out);
                     done = true; break;
                 }
-                x = Interval<mpreal>(na, nb);
+                x.a = na;
+                x.b = nb;
                 continue;
             }
 
             int st = 0;
-            Interval<mpreal> disc_clipped(max(disc.a, mpreal(0)), disc.b);
-            Interval<mpreal> sp = ISqrt(disc_clipped, st);
+            Interval<long double> disc_clipped(max(disc.a, 0.0L), disc.b);
+            Interval<long double> sp = ISqrt(disc_clipped, st);
 
-            Interval<mpreal> x1 = m - (dfm - sp) / ddfx;
-            Interval<mpreal> x2 = m - (dfm + sp) / ddfx;
+            Interval<long double> x1 = m - (dfm - sp) / ddfx;
+            Interval<long double> x2 = m - (dfm + sp) / ddfx;
 
-            mpreal a1 = max(x1.a, x.a), b1 = min(x1.b, x.b);
-            mpreal a2 = max(x2.a, x.a), b2 = min(x2.b, x.b);
+            long double a1 = max(x1.a, x.a), b1 = min(x1.b, x.b);
+            long double a2 = max(x2.a, x.a), b2 = min(x2.b, x.b);
 
             bool v1 = a1 <= b1;
             bool v2 = a2 <= b2;
@@ -176,14 +177,14 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0,
             }
 
             if (v1 && v2) {
-                Interval<mpreal> c1(a1, b1), c2(a2, b2);
-                StoreOrQueue(c1, roots, queue, depth);
-                StoreOrQueue(c2, roots, queue, depth);
+                Interval<long double> c1(a1, b1), c2(a2, b2);
+                StoreOrQueue(c1, roots, queue, depth, epsilon);
+                StoreOrQueue(c2, roots, queue, depth, epsilon);
                 out.Add("Split candidates " + FormatInterval(x) + " depth=" + to_string(depth));
                 done = true; break;
             }
 
-            Interval<mpreal> xi = v1 ? Interval<mpreal>(a1, b1) : Interval<mpreal>(a2, b2);
+            Interval<long double> xi = v1 ? Interval<long double>(a1, b1) : Interval<long double>(a2, b2);
 
             ostringstream ss;
             ss << "d=" << depth << " Iter " << setw(2) << i + 1
@@ -191,14 +192,14 @@ void runNewtonRaphsonInterval(Interval<mpreal> x0,
                << " w=" << scientific << setprecision(2) << xi.GetWidth();
             out.Add(ss.str());
 
-            if (xi.GetWidth() < mpreal(epsilon)) {
+            if (xi.GetWidth() < epsilon) {
                 roots.push_back(xi);
                 done = true; break;
             }
             x = xi;
         }
         if (!done) {
-            mpreal mid_val = x.Mid();
+            long double mid_val = x.Mid();
             BisectWithLog(queue, x, mid_val, depth, "max iter", out);
         }
     }
@@ -230,60 +231,55 @@ void runNewtonRaphsonFromPoint(long double x0,
     out.Clear();
     long double x = x0;
 
-    for (int i = 0; i < MAX_ITER; i++) {
-        long double fx   = f(x);
-        long double dfx  = df(x);
-        long double ddfx = ddf(x);
+    long double fx   = f(x);
+    long double dfx  = df(x);
+    long double ddfx = ddf(x);
 
-        if (fabsl(ddfx) < epsilon) {
-            out.Add("f''(x) = 0, stopping phase 1");
-            break;
-        }
-
-        long double disc = dfx*dfx - 2.0L*fx*ddfx;
-
-        long double xn;
-        if (disc < 0.0L) {
-            // Newton fallback instead of stopping
-            out.Add("  disc<0 at iter " + to_string(i+1) + ", Newton fallback");
-            if (fabsl(dfx) < epsilon) { out.Add("f'=0 too, stopping"); break; }
-            xn = x - fx / dfx;
-        } else {
-            long double sp = sqrtl(disc);
-            long double x1 = x - (dfx - sp) / ddfx;
-            long double x2 = x - (dfx + sp) / ddfx;
-            xn = (fabsl(x2 - x) > fabsl(x1 - x)) ? x1 : x2;
-        }
-
-        long double step = fabsl(xn - x);
-        x = xn;
-
-        ostringstream ss;
-        ss << "Iter " << setw(2) << i+1
-           << ": x=" << fixed << setprecision(15) << x
-           << "  step=" << scientific << setprecision(2) << step;
-        out.Add(ss.str());
-
-        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < epsilon) break;
+    if (fabsl(ddfx) < epsilon) {
+        out.Add("f''(x) = 0");
+        return;
     }
+
+    long double disc = dfx*dfx - 2.0L*fx*ddfx;
+
+    long double xn;
+    if (disc < 0.0L) {
+        out.Add("No real solutions");
+        return;
+    } else {
+        long double sp = sqrtl(disc);
+        long double x1 = x - (dfx - sp) / ddfx;
+        long double x2 = x - (dfx + sp) / ddfx;
+        xn = (fabsl(x2 - x) > fabsl(x1 - x)) ? x1 : x2;
+    }
+
+    long double step = fabsl(xn - x);
+    x = xn;
+
+    ostringstream ss;
+    ss << ": x=" << fixed << setprecision(15) << x
+       << "  step=" << scientific << setprecision(2) << step;
+    out.Add(ss.str());
+
+    if (step < epsilon || step / max(fabsl(x), 1.0L) < epsilon) return;
 
     out.Add("Approximate root: x^ = " + to_string(x));
 
-    mpreal xm(x);
-    mpreal delta(epsilon);
-    Interval<mpreal> bracket;
+    long double xm(x);
+    long double delta = epsilon;
+    Interval<long double> bracket;
     bool found = false;
 
     for (int i = 0; i < 60; i++) {
-        Interval<mpreal> cand(xm - delta, xm + delta);
-        Interval<mpreal> fc = fi(cand);
-        if (fc.a <= mpreal(0) && fc.b >= mpreal(0)) {
+        Interval<long double> cand(xm - delta, xm + delta);
+        Interval<long double> fc = fi(cand);
+        if (fc.a <= 0.0L && fc.b >= 0.0L) {
             bracket = cand;
-            out.Add("Bracket: " + FormatInterval(cand) + "  delta=" + delta.toString(4));
+            out.Add("Bracket: " + FormatInterval(cand) + "  delta=" + to_string(delta));
             found = true;
             break;
         }
-        delta *= mpreal(10);
+        delta *= 10.0L;
     }
 
     if (!found) { out.Add("Could not bracket root."); return; }

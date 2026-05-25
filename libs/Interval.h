@@ -730,7 +730,8 @@ Interval<T> ISqr(const Interval<T> &x, int &st) {
 
 template<typename T>
 Interval<T> ISqrt(const Interval<T> &x, int &st) {
-	Interval<T> r;
+	using std::sqrt;
+    Interval<T> r;
 	r.a = 0;
 	r.b = 0;
 	if (x.a > x.b) {
