@@ -236,7 +236,7 @@ void runNewtonRaphsonFromPoint(long double x0,
     long double ddfx = ddf(x);
 
     if (fabsl(ddfx) < epsilon) {
-        out.Add("f''(x) = 0");
+        out.Add("Error: f''(x) = 0, cannot apply NR2");
         return;
     }
 
@@ -244,8 +244,9 @@ void runNewtonRaphsonFromPoint(long double x0,
 
     long double xn;
     if (disc < 0.0L) {
-        out.Add("No real solutions");
-        return;
+        out.Add("  disc<0, using Newton fallback");
+        if (fabsl(dfx) < epsilon) { out.Add("Error: f'(x)=0 too"); return; }
+        xn = x - fx / dfx;
     } else {
         long double sp = sqrtl(disc);
         long double x1 = x - (dfx - sp) / ddfx;
@@ -254,15 +255,13 @@ void runNewtonRaphsonFromPoint(long double x0,
     }
 
     long double step = fabsl(xn - x);
+
     x = xn;
 
     ostringstream ss;
     ss << ": x=" << fixed << setprecision(15) << x
        << "  step=" << scientific << setprecision(2) << step;
     out.Add(ss.str());
-
-    if (step < epsilon || step / max(fabsl(x), 1.0L) < epsilon) return;
-
     out.Add("Approximate root: x^ = " + to_string(x));
 
     long double xm(x);

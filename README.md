@@ -60,7 +60,7 @@ $$
 x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}
 $$
 
-Dla przedziałów stosowana jest analogiczna idea, ale działania wykonywane są na obiektach `Interval<mpreal>`. Przedział jest odrzucany, jeżeli $0 \notin f(X)$. Jeżeli pochodne zawierają zero albo kandydaci metody drugiego rzędu nie dają poprawnego zawężenia, przedział jest dzielony na dwie części. Końcowym wynikiem są przedziały o szerokości mniejszej niż `1e-15`. Przedziały otrzymane po osiągnięciu limitu podziału są wypisywane osobno jako przedziały kandydujące.
+Dla przedziałów stosowana jest analogiczna idea, ale działania wykonywane są na obiektach `Interval<long double>`. Przedział jest odrzucany, jeżeli $0 \notin f(X)$. Jeżeli pochodne zawierają zero albo kandydaci metody drugiego rzędu nie dają poprawnego zawężenia, przedział jest dzielony na dwie części. Końcowym wynikiem są przedziały o szerokości mniejszej niż `epsilon`. Przedziały otrzymane po osiągnięciu limitu podziału są wypisywane osobno jako przedziały kandydujące.
 
 ## 3. Wywołanie procedury/funkcji
 
@@ -73,7 +73,8 @@ void runNewtonRaphsonReal(
     RealFn df,
     RealFn ddf,
     OutputBox& out,
-    const int MAX_ITER
+    int MAX_ITER,
+    long double epsilon
 );
 ```
 
@@ -81,13 +82,14 @@ Procedura uruchamia metodę Newtona drugiego rzędu dla punktu rzeczywistego `x0
 
 ```cpp
 void runNewtonRaphsonInterval(
-    Interval<mpreal> x0,
+    Interval<long double> x0,
     IntervalFn f,
     IntervalFn df,
     IntervalFn ddf,
     OutputBox& out,
-    const int MAX_ITER,
-    const int MAX_DEPTH
+    int MAX_ITER,
+    int MAX_DEPTH,
+    long double epsilon
 );
 ```
 
@@ -103,12 +105,13 @@ void runNewtonRaphsonFromPoint(
     IntervalFn dfi,
     IntervalFn ddfi,
     OutputBox& out,
-    const int MAX_ITER,
-    const int MAX_DEPTH
+    int MAX_ITER,
+    int MAX_DEPTH,
+    long double epsilon
 );
 ```
 
-Procedura najpierw wykonuje iteracje dla liczb rzeczywistych, następnie szuka przedziału kandydującego, dla którego ocena przedziałowa funkcji zawiera zero, i przekazuje go do `runNewtonRaphsonInterval`.
+Procedura wykonuje jeden krok Newtona drugiego rzędu dla liczby rzeczywistej, następnie szuka przedziału kandydującego wokół otrzymanego punktu, dla którego ocena przedziałowa funkcji zawiera zero, i przekazuje go do `runNewtonRaphsonInterval`.
 
 Z poziomu użytkownika program uruchamia się poleceniem:
 
@@ -136,7 +139,7 @@ W zależności od trybu pracy użytkownik podaje w polu tekstowym:
 W przypadku trybu przedziałowego wejście jest parsowane przez funkcję:
 
 ```cpp
-Interval<mpreal> ParseInterval(const string& input);
+Interval<long double> ParseInterval(const string& input);
 ```
 
 Funkcja akceptuje zapis `[a, b]` oraz pojedynczą liczbę. Spacje są ignorowane. Błędny format wejścia powoduje wyświetlenie komunikatu:
@@ -176,14 +179,14 @@ Pole wynikowe automatycznie przewija się do najnowszych komunikatów, dzięki c
 
 ## 6. Inne parametry
 
-Najważniejsze stałe sterujące obliczeniami są zdefiniowane bezpośrednio w implementacji:
+Najważniejsze parametry sterujące obliczeniami:
 
 | Parametr | Wartość | Znaczenie |
 | --- | ---: | --- |
-| tolerancja kroku | `1e-15` | bezwzględny i względny warunek zakończenia iteracji rzeczywistej |
-| tolerancja szerokości | `1e-15` | warunek uznania przedziału za wynikowy |
-| minimalna wartość pochodnej drugiej w iteracjach punktowych | `1e-20` | zabezpieczenie przed dzieleniem przez wartość bliską zeru |
-| początkowe `delta` w trybie mieszanym | `1e-10` | promień pierwszego przedziału budowanego wokół przybliżenia |
+| `epsilon` | domyślnie `1e-15` | tolerancja stopu i szerokości przedziału, podawana do procedur Newtona; można ją zmienić w polu `Epsilon` |
+| `MAX_ITER` | domyślnie `100` | limit iteracji w metodzie punktowej i przedziałowej; można go zmienić w polu `Max iterations` |
+| `MAX_DEPTH` | `50` | limit głębokości bisekcji w metodzie przedziałowej |
+| początkowe `delta` w trybie mieszanym | `epsilon` | promień pierwszego przedziału budowanego po kroku punktowym |
 
 Aplikacja graficzna działa w oknie `1300 x 700` pikseli i odświeża się z docelową szybkością `60 FPS`.
 
@@ -199,7 +202,7 @@ $$
 \frac{|x_{k+1} - x_k|}{\max(|x_{k+1}|, 1)} < \varepsilon
 $$
 
-gdzie w programie przyjęto $\varepsilon = 10^{-15}$.
+gdzie domyślnie przyjęto $\varepsilon = 10^{-15}$, z możliwością zmiany w polu `Epsilon`.
 
 ## 7. Typy parametrów
 
@@ -207,7 +210,7 @@ Typy funkcji są zdefiniowane w pliku `common/Types.h`.
 
 ```cpp
 using RealFn = std::function<long double(long double)>;
-using IntervalFn = std::function<Interval<mpreal>(Interval<mpreal>)>;
+using IntervalFn = std::function<Interval<long double>(Interval<long double>)>;
 
 typedef long double (*FnPtr)(long double);
 typedef void (*IVFnPtr)(long double, long double, long double*, long double*);
@@ -218,10 +221,9 @@ Znaczenie typów:
 | Typ | Znaczenie |
 | --- | --- |
 | `long double` | typ liczbowy dla obliczeń punktowych |
-| `mpreal` | typ wieloprecyzyjny z biblioteki MPFR C++ |
-| `Interval<mpreal>` | przedział o końcach typu `mpreal` |
+| `Interval<long double>` | przedział o końcach typu `long double` |
 | `RealFn` | funkcja rzeczywista przyjmująca i zwracająca `long double` |
-| `IntervalFn` | funkcja przedziałowa przyjmująca i zwracająca `Interval<mpreal>` |
+| `IntervalFn` | funkcja przedziałowa przyjmująca i zwracająca `Interval<long double>` |
 | `OutputBox&` | referencja do komponentu GUI, do którego dopisywane są komunikaty |
 
 Biblioteka dynamiczna z funkcją musi eksportować sześć symboli C:
@@ -246,8 +248,8 @@ Procedury Newtona korzystają z następujących identyfikatorów i elementów sp
 
 | Identyfikator | Lokalizacja | Rola |
 | --- | --- | --- |
-| `Interval<mpreal>` | `libs/Interval.h` | reprezentacja przedziałów |
-| `mpreal` | `libs/mpreal.h` | liczby wieloprecyzyjne MPFR |
+| `Interval<long double>` | `libs/Interval.h` | reprezentacja przedziałów |
+| `long double` | typ wbudowany C++ | typ końców przedziałów i obliczeń punktowych |
 | `ContainsZero` | `math/IntervalUtils.h` | sprawdza, czy przedział zawiera zero |
 | `ISqrt` | `libs/Interval.h` | pierwiastek z przedziału |
 | `IntRead` | `libs/Interval.h` | wczytywanie liczby jako przedziału z poprawnym zaokrągleniem |
@@ -258,7 +260,7 @@ Procedury Newtona korzystają z następujących identyfikatorów i elementów sp
 | `OutputBox::Add` | `ui/OutputBox.cpp` | dopisywanie komunikatów do okna wyników |
 | `OutputBox::Clear` | `ui/OutputBox.cpp` | czyszczenie okna wyników |
 | `loadFunctions` | `math/IntervalUtils.cpp` | ładowanie funkcji z biblioteki dynamicznej przez `dlopen` i `dlsym` |
-| `ParseInterval` | `math/IntervalUtils.cpp` | zamiana tekstu użytkownika na `Interval<mpreal>` |
+| `ParseInterval` | `math/IntervalUtils.cpp` | zamiana tekstu użytkownika na `Interval<long double>` |
 
 Projekt zależy od bibliotek systemowych:
 
@@ -279,7 +281,14 @@ Poniżej przedstawiono najważniejsze fragmenty algorytmu. Pełny kod znajduje s
 ### 9.1. Metoda dla liczb rzeczywistych
 
 ```cpp
-void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, OutputBox& out, const int MAX_ITER) {
+void runNewtonRaphsonReal(long double x0, 
+                          RealFn f,
+                          RealFn df, 
+                          RealFn ddf, 
+                          OutputBox& out, 
+                          const int MAX_ITER,
+                          long double epsilon) 
+{
     out.Clear();
     long double x = x0;
 
@@ -288,7 +297,7 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
         long double dfx  = df(x);
         long double ddfx = ddf(x);
 
-        if (fabsl(ddfx) < 1e-20L) {
+        if (fabsl(ddfx) < epsilon) {
             out.Add("Error: f''(x) = 0, cannot apply NR2");
             return;
         }
@@ -298,7 +307,7 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
         long double xn;
         if (disc < 0.0L) {
             out.Add("  disc<0 at iter " + to_string(i+1) + ", using Newton fallback");
-            if (fabsl(dfx) < 1e-20L) { out.Add("Error: f'(x)=0 too"); return; }
+            if (fabsl(dfx) < epsilon) { out.Add("Error: f'(x)=0 too"); return; }
             xn = x - fx / dfx;
         } else {
             long double sp = sqrtl(disc);
@@ -317,9 +326,9 @@ void runNewtonRaphsonReal(long double x0, RealFn f, RealFn df, RealFn ddf, Outpu
 
         x = xn;
 
-        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < 1e-15L) {
+        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < epsilon) {
             ostringstream root;
-            root << fixed << setprecision(20) << x;
+            root << scientific << setprecision(20) << x;
             out.Add("--- Roots: ---");
             out.Add("Root: " + root.str());
             return;
@@ -335,7 +344,7 @@ Wersja przedziałowa działa na kolejce przedziałów. Każdy element kolejki pr
 
 ```cpp
 struct SubInterval {
-    Interval<mpreal> x;
+    Interval<long double> x;
     int depth;
 };
 ```
@@ -361,12 +370,12 @@ Powtarzalne operacje zostały wydzielone do funkcji pomocniczych:
 Najważniejszy fragment:
 
 ```cpp
-Interval<mpreal> disc = dfm * dfm - two * fm * ddfx;
+Interval<long double> disc = dfm * dfm - two * fm * ddfx;
 
-if (disc.b < mpreal(0)) {
-    Interval<mpreal> xn = m - fm / dfm;
-    mpreal na = max(xn.a, x.a);
-    mpreal nb = min(xn.b, x.b);
+if (disc.b < 0.0L) {
+    Interval<long double> xn = m - fm / dfm;
+    long double na = max(xn.a, x.a);
+    long double nb = min(xn.b, x.b);
 
     if (na > nb) {
         BisectWithLog(queue, x, mid_val, depth, "disc<0", out);
@@ -374,8 +383,85 @@ if (disc.b < mpreal(0)) {
         break;
     }
 
-    x = Interval<mpreal>(na, nb);
+    x.a = na;
+    x.b = nb;
     continue;
+}
+```
+
+### 9.3. Tryb startu z punktu dla metody przedziałowej
+
+Tryb `Interval for real numbers` zaczyna od jednego kroku Newtona drugiego rzędu z punktu `x0`. Następnie funkcja `runNewtonRaphsonFromPoint` buduje wokół otrzymanego punktu przedział `[x - delta, x + delta]` i przekazuje znaleziony przedział do `runNewtonRaphsonInterval`. Jeżeli początkowy przedział nie zawiera zera w ocenie przedziałowej funkcji, `delta` jest zwiększane dziesięciokrotnie, maksymalnie przez 60 prób.
+
+```cpp
+void runNewtonRaphsonFromPoint(long double x0, 
+                               RealFn f, 
+                               RealFn df, 
+                               RealFn ddf, 
+                               IntervalFn fi, 
+                               IntervalFn dfi, 
+                               IntervalFn ddfi, 
+                               OutputBox& out, 
+                               const int MAX_ITER, 
+                               const int MAX_DEPTH,
+                               long double epsilon) 
+{
+    out.Clear();
+    long double x = x0;
+
+    long double fx   = f(x);
+    long double dfx  = df(x);
+    long double ddfx = ddf(x);
+
+    if (fabsl(ddfx) < epsilon) {
+        out.Add("Error: f''(x) = 0, cannot apply NR2");
+        return;
+    }
+
+    long double disc = dfx*dfx - 2.0L*fx*ddfx;
+
+    long double xn;
+    if (disc < 0.0L) {
+        out.Add("  disc<0, using Newton fallback");
+        if (fabsl(dfx) < epsilon) { out.Add("Error: f'(x)=0 too"); return; }
+        xn = x - fx / dfx;
+    } else {
+        long double sp = sqrtl(disc);
+        long double x1 = x - (dfx - sp) / ddfx;
+        long double x2 = x - (dfx + sp) / ddfx;
+        xn = (fabsl(x2 - x) > fabsl(x1 - x)) ? x1 : x2;
+    }
+
+    long double step = fabsl(xn - x);
+
+    x = xn;
+
+    ostringstream ss;
+    ss << ": x=" << fixed << setprecision(15) << x
+       << "  step=" << scientific << setprecision(2) << step;
+    out.Add(ss.str());
+    out.Add("Approximate root: x^ = " + to_string(x));
+
+    long double xm(x);
+    long double delta = epsilon;
+    Interval<long double> bracket;
+    bool found = false;
+
+    for (int i = 0; i < 60; i++) {
+        Interval<long double> cand(xm - delta, xm + delta);
+        Interval<long double> fc = fi(cand);
+        if (fc.a <= 0.0L && fc.b >= 0.0L) {
+            bracket = cand;
+            out.Add("Bracket: " + FormatInterval(cand) + "  delta=" + to_string(delta));
+            found = true;
+            break;
+        }
+        delta *= 10.0L;
+    }
+
+    if (!found) { out.Add("Could not bracket root."); return; }
+
+    runNewtonRaphsonInterval(bracket, fi, dfi, ddfi, out, MAX_ITER, MAX_DEPTH, epsilon);
 }
 ```
 
