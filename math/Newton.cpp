@@ -46,13 +46,31 @@ Interval<long double> PointInterval(long double x) {
     return r;
 }
 
-void runNewtonRaphsonReal(long double x0, 
-                          RealFn f,
-                          RealFn df, 
-                          RealFn ddf, 
-                          OutputBox& out, 
-                          const int MAX_ITER,
-                          long double epsilon) 
+bool StopInterval(Interval<long double>& old, Interval<long double>& x, long double epsilon) {
+    long double leftStep  = fabsl(x.a - old.a);
+    long double rightStep = fabsl(x.b - old.b);
+
+    return leftStep < epsilon && rightStep < epsilon;
+}
+
+bool StopIntervalRelative(Interval<long double>& old, Interval<long double>& x, long double epsilon) {
+    long double leftStep  = fabsl(x.a - old.a);
+    long double rightStep = fabsl(x.b - old.b);
+
+    long double leftScale  = std::max(fabsl(x.a), 1.0L);
+    long double rightScale = std::max(fabsl(x.b), 1.0L);
+
+    return leftStep / leftScale < epsilon && rightStep / rightScale < epsilon;
+}
+
+void runNewtonRaphsonReal(
+     long double x0, 
+     RealFn f,
+     RealFn df, 
+     RealFn ddf, 
+     OutputBox& out, 
+     const int MAX_ITER,
+     long double epsilon) 
 {
     out.Clear();
     long double x = x0;
@@ -71,9 +89,8 @@ void runNewtonRaphsonReal(long double x0,
 
         long double xn;
         if (disc < 0.0L) {
-            out.Add("  disc<0 at iter " + to_string(i+1) + ", using Newton fallback");
-            if (fabsl(dfx) < epsilon) { out.Add("Error: f'(x)=0 too"); return; }
-            xn = x - fx / dfx;
+            out.Add("  disc<0 at iter " + to_string(i+1));
+            return;
         } else {
             long double sp = sqrtl(disc);
             long double x1 = x - (dfx - sp) / ddfx;
@@ -195,21 +212,14 @@ void runNewtonRaphsonInterval(
 
         out.Add(ss.str());
 
-        if (step < tol) {
-            Interval<long double> root = InflateInterval(x, tol);
-
+        if (StopInterval(old, x, epsilon) || StopIntervalRelative(old, x, epsilon)) 
+        {
             ostringstream ss;
             out.Add("--- Interval root: ---");
-            ss << FormatInterval(root)
-               << " w=" << scientific << setprecision(2) << root.GetWidth();
+            ss << FormatInterval(x)
+               << " w=" << scientific << setprecision(2) << IntWidth(x);
             out.Add(ss.str());
             return;
-        }
-
-        // If the interval becomes a point interval, inflate it a little
-        // so the next interval operation still produces an interval enclosure.
-        if (IntWidth(x) == 0.0L) {
-            x = InflateInterval(x, tol);
         }
     }
 
@@ -229,77 +239,83 @@ void runNewtonRaphsonFromPoint(
 {
     out.Clear();
 
-    Interval<long double> x = PointInterval(x0);
-
     const Interval<long double> two = IntRead<long double>("2");
+
+    Interval<long double> x = PointInterval(x0);
 
     for (int i = 0; i < MAX_ITER; i++) {
         Interval<long double> old = x;
 
-        Interval<long double> fx   = f(x);
-        Interval<long double> dfx  = df(x);
-        Interval<long double> ddfx = ddf(x);
+        long double mid = old.Mid();
+        Interval<long double> m = PointInterval(mid);
+
+        Interval<long double> fm   = f(m);
+        Interval<long double> dfm  = df(m);
+        Interval<long double> ddfx = ddf(old);
 
         if (ContainsZero(ddfx)) {
             out.Add("Error: f''(x) contains 0, cannot apply NR2.");
-            out.Add("Current interval: " + FormatInterval(x));
+            out.Add("Current interval: " + FormatInterval(old));
             return;
         }
 
-        Interval<long double> disc = dfx * dfx - two * fx * ddfx;
+        Interval<long double> disc =
+            ISub(
+                IMul(dfm, dfm),
+                IMul(IMul(two, fm), ddfx)
+            );
 
         if (disc.b < 0.0L) {
             out.Add("Error: discriminant is strictly negative, cannot apply NR2.");
             out.Add("disc = " + FormatInterval(disc));
-            out.Add("Current interval: " + FormatInterval(x));
+            out.Add("Current interval: " + FormatInterval(old));
             return;
         }
 
-        Interval<long double> disc_clipped(
-            max(disc.a, 0.0L),
-            disc.b
-        );
+        Interval<long double> discClipped;
+        discClipped.a = max(0.0L, disc.a);
+        discClipped.b = disc.b;
 
         int st = 0;
-        Interval<long double> sp = ISqrt(disc_clipped, st);
+        Interval<long double> sp = ISqrt(discClipped, st);
 
-        Interval<long double> x1 = x - (dfx - sp) / ddfx;
-        Interval<long double> x2 = x - (dfx + sp) / ddfx;
+        if (st != 0) {
+            out.Add("Error: could not compute sqrt(discriminant).");
+            out.Add("disc = " + FormatInterval(disc));
+            return;
+        }
 
-        long double oldMid = old.Mid();
+        Interval<long double> x1 = ISub(m, IDiv(ISub(dfm, sp), ddfx));
 
-        long double d1 = DistanceToInterval(oldMid, x1);
-        long double d2 = DistanceToInterval(oldMid, x2);
+        Interval<long double> x2 = ISub(m, IDiv(IAdd(dfm, sp), ddfx));
+
+        long double d1 = fabsl(x1.Mid() - mid);
+        long double d2 = fabsl(x2.Mid() - mid);
 
         Interval<long double> xn = (d1 <= d2) ? x1 : x2;
 
         x = xn;
 
-        long double step = max(
-            fabsl(x.a - old.a),
-            fabsl(x.b - old.b)
-        );
+        long double leftStep  = fabsl(x.a - old.a);
+        long double rightStep = fabsl(x.b - old.b);
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
            << ": " << FormatInterval(x)
-           << " w=" << scientific << setprecision(2) << x.GetWidth()
-           << " step=" << step;
+           << " w=" << scientific << setprecision(2) << IntWidth(x)
+           << " leftStep=" << leftStep
+           << " rightStep=" << rightStep;
 
         out.Add(ss.str());
 
-        if (x.GetWidth() < epsilon && step < epsilon) {
-            ostringstream ss;
+        if (StopInterval(old, x, epsilon) || StopIntervalRelative(old, x, epsilon)) 
+        {
+            ostringstream root;
             out.Add("--- Interval root: ---");
-            ss << FormatInterval(x)
-               << " w=" << scientific << setprecision(2) << x.GetWidth();
-            out.Add(ss.str());
+            root << FormatInterval(x)
+                 << " w=" << scientific << setprecision(2) << IntWidth(x);
+            out.Add(root.str());
             return;
-        }
-
-        if (x.GetWidth() == 0.0L) {
-            long double r = epsilon * max(fabsl(x.Mid()), 1.0L);
-            x = InflateInterval(x, r);
         }
     }
 

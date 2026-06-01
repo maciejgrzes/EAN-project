@@ -5,7 +5,7 @@ LIBS := -lmpfr -lgmp -lraylib -ldl
 BUILD_DIR := build
 
 TARGET := $(BUILD_DIR)/main
-LIB_TARGETS := $(BUILD_DIR)/funcs/func.so $(BUILD_DIR)/funcs/func1.so $(BUILD_DIR)/funcs/func2.so
+LIB_TARGETS := $(BUILD_DIR)/funcs/func.so $(BUILD_DIR)/funcs/func1.so $(BUILD_DIR)/funcs/func2.so $(BUILD_DIR)/funcs/func3.so
 
 SRCS := main.cpp \
 		math/IntervalUtils.cpp \
