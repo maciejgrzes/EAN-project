@@ -33,7 +33,6 @@ int main(int argc, char* argv[]) {
     IntervalFn f_iv, df_iv, ddf_iv;
 
     int MAX_ITER = 100;
-    int MAX_DEPTH = 50;
     long double epsilon = 1.0e-15L;
 
     string soPath = "./build/funcs/func.so";
@@ -91,13 +90,12 @@ int main(int argc, char* argv[]) {
                     runNewtonRaphsonReal(x0, f, df, ddf, output, MAX_ITER, epsilon);
                 }
                 else if (currentMode == Mode::IntervalFromReal) {
-                    // Interval<long double> x0 = IntRead<long double>(pushed_input);
                     long double x0 = stold(pushed_input);
-                    runNewtonRaphsonFromPoint(x0, f, df, ddf, f_iv, df_iv, ddf_iv, output, MAX_ITER, MAX_DEPTH, epsilon);
+                    runNewtonRaphsonFromPoint(x0, f_iv, df_iv, ddf_iv, output, MAX_ITER, epsilon);
                 }
                 else {
                     Interval<long double> x0 = ParseInterval(pushed_input);
-                    runNewtonRaphsonInterval(x0, f_iv, df_iv, ddf_iv, output, MAX_ITER, MAX_DEPTH, epsilon);
+                    runNewtonRaphsonInterval(x0, f_iv, df_iv, ddf_iv, output, MAX_ITER, epsilon);
                 }
             } catch (...) {
                 output.Clear();

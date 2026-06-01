@@ -4,36 +4,46 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
-#include <vector>
-
+#include <string>
 using namespace std;
 
-namespace {
-    struct SubInterval {
-        Interval<long double> x;
-        int depth;
-    };
+long double DistanceToInterval(long double p, const Interval<long double>& x) {
+    if (p < x.a) return x.a - p;
+    if (p > x.b) return p - x.b;
+    return 0.0L;
+}
 
-    string FormatInterval(Interval<long double> x) {
-        string lo, hi;
-        x.IEndsToStrings(lo, hi);
-        return "[" + lo + ", " + hi + "]";
-    }
+Interval<long double> InflateInterval(const Interval<long double>& x, long double r)
+{
+    ostringstream ss;
+    ss << setprecision(numeric_limits<long double>::max_digits10) << r;
 
-    void PushBisection(vector<SubInterval>& queue, Interval<long double> x, long double mid, int depth) {
-        queue.push_back({ Interval<long double>(mid, x.b), depth + 1 });
-        queue.push_back({ Interval<long double>(x.a, mid), depth + 1 });
-    }
+    string rs = ss.str();
 
-    void BisectWithLog(vector<SubInterval>& queue, Interval<long double> x, long double mid, int depth, const string& reason, OutputBox& out) {
-        PushBisection(queue, x, mid, depth);
-        out.Add("Bisect (" + reason + ") " + FormatInterval(x) + " depth=" + to_string(depth));
-    }
+    Interval<long double> rad;
+    rad.a = LeftRead<long double>("-" + rs);
+    rad.b = RightRead<long double>(rs);
 
-    void StoreOrQueue(Interval<long double> x, vector<Interval<long double>>& roots, vector<SubInterval>& queue, int depth, long double eps) {
-        if (x.GetWidth() < eps) roots.push_back(x);
-        else queue.push_back({ x, depth + 1 });
-    }
+    return IAdd(x, rad);
+}
+
+string FormatInterval(Interval<long double> x) {
+    string lo, hi;
+    x.IEndsToStrings(lo, hi);
+    return "[" + lo + ", " + hi + "]";
+}
+
+Interval<long double> PointInterval(long double x) {
+    ostringstream ss;
+    ss << setprecision(numeric_limits<long double>::max_digits10) << x;
+
+    string s = ss.str();
+
+    Interval<long double> r;
+    r.a = LeftRead<long double>(s);
+    r.b = RightRead<long double>(s);
+
+    return r;
 }
 
 void runNewtonRaphsonReal(long double x0, 
@@ -93,195 +103,206 @@ void runNewtonRaphsonReal(long double x0,
 }
 
 
-void runNewtonRaphsonInterval(Interval<long double> x0, 
-                              IntervalFn f, 
-                              IntervalFn df, 
-                              IntervalFn ddf, 
-                              OutputBox& out, 
-                              const int MAX_ITER, 
-                              const int MAX_DEPTH,
-                              long double epsilon) 
+void runNewtonRaphsonInterval(
+     Interval<long double> x0,
+     IntervalFn f,
+     IntervalFn df,
+     IntervalFn ddf,
+     OutputBox& out,
+     const int MAX_ITER,
+     long double epsilon) 
 {
     out.Clear();
-    vector<SubInterval> queue = {{ x0, 0 }};
-    vector<Interval<long double>> roots;
-    vector<Interval<long double>> depthLimited;
 
     const Interval<long double> two = IntRead<long double>("2");
 
-    while (!queue.empty()) {
-        auto [x, depth] = queue.back();
-        queue.pop_back();
+    Interval<long double> x = x0;
 
-        Interval<long double> fx = f(x);
-        if (fx.a > 0.0L || fx.b < 0.0L) {
-            out.Add("Skip " + FormatInterval(x) + ": f doesn't contain 0");
-            continue;
+    for (int i = 0; i < MAX_ITER; i++) {
+        Interval<long double> old = x;
+
+        long double mid = old.Mid();
+        Interval<long double> m = PointInterval(mid);
+
+        Interval<long double> fm   = f(m);
+        Interval<long double> dfm  = df(m);
+        Interval<long double> ddfx = ddf(old);
+
+        if (ContainsZero(ddfx)) {
+            out.Add("Error: f''(x) contains 0, cannot apply NR2.");
+            out.Add("Current interval: " + FormatInterval(old));
+            return;
         }
 
-        if (depth > MAX_DEPTH) {
-            out.Add("Max bisection depth at " + FormatInterval(x));
-            depthLimited.push_back(x);
-            continue;
+        Interval<long double> disc =
+            ISub(
+                IMul(dfm, dfm),
+                IMul(IMul(two, fm), ddfx)
+            );
+
+        if (disc.b < 0.0L) {
+            out.Add("Error: discriminant is strictly negative, cannot apply NR2.");
+            out.Add("disc = " + FormatInterval(disc));
+            out.Add("Current interval: " + FormatInterval(old));
+            return;
         }
 
-        bool done = false;
-        for (int i = 0; i < MAX_ITER; i++) {
-            long double mid_val = x.Mid();
-            Interval<long double> m(mid_val, mid_val);
+        Interval<long double> discClipped;
+        discClipped.a = max(0.0L, disc.a);
+        discClipped.b = disc.b;
 
-            Interval<long double> fm   = f(m);
-            Interval<long double> dfm  = df(m);
-            Interval<long double> ddfx = ddf(x);
+        int st = 0;
+        Interval<long double> sp = ISqrt(discClipped, st);
 
-            if (ContainsZero(ddfx)) {
-                BisectWithLog(queue, x, mid_val, depth, "f''=0", out);
-                done = true; break;
-            }
+        if (st != 0) {
+            out.Add("Error: could not compute sqrt(discriminant).");
+            out.Add("disc = " + FormatInterval(disc));
+            return;
+        }
 
-            if (ContainsZero(dfm)) {
-                BisectWithLog(queue, x, mid_val, depth, "f'=0", out);
-                done = true; break;
-            }
+        Interval<long double> x1 =
+            ISub(
+                m,
+                IDiv(ISub(dfm, sp), ddfx)
+            );
 
-            Interval<long double> disc = dfm * dfm - two * fm * ddfx;
+        Interval<long double> x2 =
+            ISub(
+                m,
+                IDiv(IAdd(dfm, sp), ddfx)
+            );
 
-            if (disc.b < 0.0L) {
-                Interval<long double> xn = m - fm / dfm;
-                long double na = max(xn.a, x.a), nb = min(xn.b, x.b);
-                if (na > nb) {
-                    BisectWithLog(queue, x, mid_val, depth, "disc<0", out);
-                    done = true; break;
-                }
-                x.a = na;
-                x.b = nb;
-                continue;
-            }
+        long double d1 = DistanceToInterval(mid, x1);
+        long double d2 = DistanceToInterval(mid, x2);
 
-            int st = 0;
-            Interval<long double> disc_clipped(max(disc.a, 0.0L), disc.b);
-            Interval<long double> sp = ISqrt(disc_clipped, st);
+        Interval<long double> xn = (d1 <= d2) ? x1 : x2;
 
-            Interval<long double> x1 = m - (dfm - sp) / ddfx;
-            Interval<long double> x2 = m - (dfm + sp) / ddfx;
+        x = xn;
 
-            long double a1 = max(x1.a, x.a), b1 = min(x1.b, x.b);
-            long double a2 = max(x2.a, x.a), b2 = min(x2.b, x.b);
+        long double step = max(
+            fabsl(x.a - old.a),
+            fabsl(x.b - old.b)
+        );
 
-            bool v1 = a1 <= b1;
-            bool v2 = a2 <= b2;
+        long double scale = max(fabsl(x.Mid()), 1.0L);
+        long double tol = epsilon * scale;
 
-            if (!v1 && !v2) {
-                BisectWithLog(queue, x, mid_val, depth, "candidates miss", out);
-                done = true; break;
-            }
+        ostringstream ss;
+        ss << "Iter " << setw(2) << i + 1
+           << ": " << FormatInterval(x)
+           << " w=" << scientific << setprecision(2) << IntWidth(x)
+           << " step=" << step;
 
-            if (v1 && v2) {
-                Interval<long double> c1(a1, b1), c2(a2, b2);
-                StoreOrQueue(c1, roots, queue, depth, epsilon);
-                StoreOrQueue(c2, roots, queue, depth, epsilon);
-                out.Add("Split candidates " + FormatInterval(x) + " depth=" + to_string(depth));
-                done = true; break;
-            }
+        out.Add(ss.str());
 
-            Interval<long double> xi = v1 ? Interval<long double>(a1, b1) : Interval<long double>(a2, b2);
+        if (step < tol) {
+            Interval<long double> root = InflateInterval(x, tol);
 
             ostringstream ss;
-            ss << "d=" << depth << " Iter " << setw(2) << i + 1
-               << ": " << FormatInterval(xi)
-               << " w=" << scientific << setprecision(2) << xi.GetWidth();
+            out.Add("--- Interval root: ---");
+            ss << FormatInterval(root)
+               << " w=" << scientific << setprecision(2) << root.GetWidth();
             out.Add(ss.str());
-
-            if (xi.GetWidth() < epsilon) {
-                roots.push_back(xi);
-                done = true; break;
-            }
-            x = xi;
+            return;
         }
-        if (!done) {
-            long double mid_val = x.Mid();
-            BisectWithLog(queue, x, mid_val, depth, "max iter", out);
+
+        // If the interval becomes a point interval, inflate it a little
+        // so the next interval operation still produces an interval enclosure.
+        if (IntWidth(x) == 0.0L) {
+            x = InflateInterval(x, tol);
         }
     }
 
-    out.Add("--- Roots: " + to_string(roots.size()) + " ---");
-    for (auto& r : roots) {
-        out.Add("Root: " + FormatInterval(r));
-    }
-
-    out.Add("--- Depth limited intervals: " + to_string(depthLimited.size()) + " ---");
-    for (auto& r : depthLimited) {
-        out.Add("Depth-limited candidate: " + FormatInterval(r));
-    }
+    out.Add("Max iterations reached.");
+    out.Add("Current interval: " + FormatInterval(x));
 }
 
 
-void runNewtonRaphsonFromPoint(long double x0, 
-                               RealFn f, 
-                               RealFn df, 
-                               RealFn ddf, 
-                               IntervalFn fi, 
-                               IntervalFn dfi, 
-                               IntervalFn ddfi, 
-                               OutputBox& out, 
-                               const int MAX_ITER, 
-                               const int MAX_DEPTH,
-                               long double epsilon) 
+void runNewtonRaphsonFromPoint(
+     long double x0,
+     IntervalFn f,
+     IntervalFn df,
+     IntervalFn ddf,
+     OutputBox& out,
+     const int MAX_ITER,
+     long double epsilon) 
 {
     out.Clear();
-    long double x = x0;
 
-    long double fx   = f(x);
-    long double dfx  = df(x);
-    long double ddfx = ddf(x);
+    Interval<long double> x = PointInterval(x0);
 
-    if (fabsl(ddfx) < epsilon) {
-        out.Add("Error: f''(x) = 0, cannot apply NR2");
-        return;
-    }
+    const Interval<long double> two = IntRead<long double>("2");
 
-    long double disc = dfx*dfx - 2.0L*fx*ddfx;
+    for (int i = 0; i < MAX_ITER; i++) {
+        Interval<long double> old = x;
 
-    long double xn;
-    if (disc < 0.0L) {
-        out.Add("  disc<0, using Newton fallback");
-        if (fabsl(dfx) < epsilon) { out.Add("Error: f'(x)=0 too"); return; }
-        xn = x - fx / dfx;
-    } else {
-        long double sp = sqrtl(disc);
-        long double x1 = x - (dfx - sp) / ddfx;
-        long double x2 = x - (dfx + sp) / ddfx;
-        xn = (fabsl(x2 - x) > fabsl(x1 - x)) ? x1 : x2;
-    }
+        Interval<long double> fx   = f(x);
+        Interval<long double> dfx  = df(x);
+        Interval<long double> ddfx = ddf(x);
 
-    long double step = fabsl(xn - x);
-
-    x = xn;
-
-    ostringstream ss;
-    ss << ": x=" << fixed << setprecision(15) << x
-       << "  step=" << scientific << setprecision(2) << step;
-    out.Add(ss.str());
-    out.Add("Approximate root: x^ = " + to_string(x));
-
-    long double xm(x);
-    long double delta = epsilon;
-    Interval<long double> bracket;
-    bool found = false;
-
-    for (int i = 0; i < 60; i++) {
-        Interval<long double> cand(xm - delta, xm + delta);
-        Interval<long double> fc = fi(cand);
-        if (fc.a <= 0.0L && fc.b >= 0.0L) {
-            bracket = cand;
-            out.Add("Bracket: " + FormatInterval(cand) + "  delta=" + to_string(delta));
-            found = true;
-            break;
+        if (ContainsZero(ddfx)) {
+            out.Add("Error: f''(x) contains 0, cannot apply NR2.");
+            out.Add("Current interval: " + FormatInterval(x));
+            return;
         }
-        delta *= 10.0L;
+
+        Interval<long double> disc = dfx * dfx - two * fx * ddfx;
+
+        if (disc.b < 0.0L) {
+            out.Add("Error: discriminant is strictly negative, cannot apply NR2.");
+            out.Add("disc = " + FormatInterval(disc));
+            out.Add("Current interval: " + FormatInterval(x));
+            return;
+        }
+
+        Interval<long double> disc_clipped(
+            max(disc.a, 0.0L),
+            disc.b
+        );
+
+        int st = 0;
+        Interval<long double> sp = ISqrt(disc_clipped, st);
+
+        Interval<long double> x1 = x - (dfx - sp) / ddfx;
+        Interval<long double> x2 = x - (dfx + sp) / ddfx;
+
+        long double oldMid = old.Mid();
+
+        long double d1 = DistanceToInterval(oldMid, x1);
+        long double d2 = DistanceToInterval(oldMid, x2);
+
+        Interval<long double> xn = (d1 <= d2) ? x1 : x2;
+
+        x = xn;
+
+        long double step = max(
+            fabsl(x.a - old.a),
+            fabsl(x.b - old.b)
+        );
+
+        ostringstream ss;
+        ss << "Iter " << setw(2) << i + 1
+           << ": " << FormatInterval(x)
+           << " w=" << scientific << setprecision(2) << x.GetWidth()
+           << " step=" << step;
+
+        out.Add(ss.str());
+
+        if (x.GetWidth() < epsilon && step < epsilon) {
+            ostringstream ss;
+            out.Add("--- Interval root: ---");
+            ss << FormatInterval(x)
+               << " w=" << scientific << setprecision(2) << x.GetWidth();
+            out.Add(ss.str());
+            return;
+        }
+
+        if (x.GetWidth() == 0.0L) {
+            long double r = epsilon * max(fabsl(x.Mid()), 1.0L);
+            x = InflateInterval(x, r);
+        }
     }
 
-    if (!found) { out.Add("Could not bracket root."); return; }
-
-    runNewtonRaphsonInterval(bracket, fi, dfi, ddfi, out, MAX_ITER, MAX_DEPTH, epsilon);
+    out.Add("Max iterations reached.");
+    out.Add("Current interval: " + FormatInterval(x));
 }
