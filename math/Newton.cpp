@@ -81,7 +81,7 @@ void runNewtonRaphsonReal(
         long double ddfx = ddf(x);
 
         if (fabsl(ddfx) < epsilon) {
-            out.Add("Error: f''(x) = 0, cannot apply NR2");
+            out.Add("Error: f''(x) = 0, division by 0.");
             return;
         }
 
@@ -89,7 +89,7 @@ void runNewtonRaphsonReal(
 
         long double xn;
         if (disc < 0.0L) {
-            out.Add("  disc<0 at iter " + to_string(i+1));
+            out.Add("discriminant < 0 at iter " + to_string(i+1));
             return;
         } else {
             long double sp = sqrtl(disc);
@@ -146,19 +146,15 @@ void runNewtonRaphsonInterval(
         Interval<long double> ddfx = ddf(old);
 
         if (ContainsZero(ddfx)) {
-            out.Add("Error: f''(x) contains 0, cannot apply NR2.");
+            out.Add("Error: f''(x) contains 0, division by 0.");
             out.Add("Current interval: " + FormatInterval(old));
             return;
         }
 
-        Interval<long double> disc =
-            ISub(
-                IMul(dfm, dfm),
-                IMul(IMul(two, fm), ddfx)
-            );
+        Interval<long double> disc = (dfm * dfm) - (two * fm * ddfx);
 
         if (disc.b < 0.0L) {
-            out.Add("Error: discriminant is strictly negative, cannot apply NR2.");
+            out.Add("Error: discriminant is strictly negative, no real solution.");
             out.Add("disc = " + FormatInterval(disc));
             out.Add("Current interval: " + FormatInterval(old));
             return;
@@ -177,17 +173,8 @@ void runNewtonRaphsonInterval(
             return;
         }
 
-        Interval<long double> x1 =
-            ISub(
-                m,
-                IDiv(ISub(dfm, sp), ddfx)
-            );
-
-        Interval<long double> x2 =
-            ISub(
-                m,
-                IDiv(IAdd(dfm, sp), ddfx)
-            );
+        Interval<long double> x1 = m - (dfm - sp) / ddfx;
+        Interval<long double> x2 = m - (dfm + sp) / ddfx;
 
         long double d1 = DistanceToInterval(mid, x1);
         long double d2 = DistanceToInterval(mid, x2);
@@ -254,19 +241,15 @@ void runNewtonRaphsonFromPoint(
         Interval<long double> ddfx = ddf(old);
 
         if (ContainsZero(ddfx)) {
-            out.Add("Error: f''(x) contains 0, cannot apply NR2.");
+            out.Add("Error: f''(x) contains 0, division by 0.");
             out.Add("Current interval: " + FormatInterval(old));
             return;
         }
 
-        Interval<long double> disc =
-            ISub(
-                IMul(dfm, dfm),
-                IMul(IMul(two, fm), ddfx)
-            );
+        Interval<long double> disc = (dfm * dfm) - (two * fm * ddfx);
 
         if (disc.b < 0.0L) {
-            out.Add("Error: discriminant is strictly negative, cannot apply NR2.");
+            out.Add("Error: discriminant is strictly negative, no real solution.");
             out.Add("disc = " + FormatInterval(disc));
             out.Add("Current interval: " + FormatInterval(old));
             return;
@@ -285,9 +268,8 @@ void runNewtonRaphsonFromPoint(
             return;
         }
 
-        Interval<long double> x1 = ISub(m, IDiv(ISub(dfm, sp), ddfx));
-
-        Interval<long double> x2 = ISub(m, IDiv(IAdd(dfm, sp), ddfx));
+        Interval<long double> x1 = m - (dfm - sp) / ddfx;
+        Interval<long double> x2 = m - (dfm + sp) / ddfx;
 
         long double d1 = fabsl(x1.Mid() - mid);
         long double d2 = fabsl(x2.Mid() - mid);
@@ -296,15 +278,16 @@ void runNewtonRaphsonFromPoint(
 
         x = xn;
 
-        long double leftStep  = fabsl(x.a - old.a);
-        long double rightStep = fabsl(x.b - old.b);
+        long double step = max(
+            fabsl(x.a - old.a),
+            fabsl(x.b - old.b)
+        );
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
            << ": " << FormatInterval(x)
            << " w=" << scientific << setprecision(2) << IntWidth(x)
-           << " leftStep=" << leftStep
-           << " rightStep=" << rightStep;
+           << " step = " << step;
 
         out.Add(ss.str());
 
