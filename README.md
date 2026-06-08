@@ -78,21 +78,21 @@ make clean
 
 Program implementuje metode Newtona-Raphsona drugiego rzedu. Dla punktu `x_n` uzywane jest rozwiniecie:
 
-```text
+$$
 f(x_n) + f'(x_n)(x - x_n) + 1/2 f''(x_n)(x - x_n)^2 = 0
-```
+$$
 
 Po podstawieniu `h = x - x_n` otrzymujemy rownanie kwadratowe:
 
-```text
+$$
 1/2 f''(x_n)h^2 + f'(x_n)h + f(x_n) = 0
-```
+$$
 
 Kolejne przyblizenie jest wyznaczane z kandydatow:
 
-```text
+$$
 x_{n+1} = x_n - (f'(x_n) +/- sqrt((f'(x_n))^2 - 2f(x_n)f''(x_n))) / f''(x_n)
-```
+$$
 
 Dla liczb rzeczywistych program wybiera kandydata dajacego mniejszy krok wzgledem aktualnego punktu. Jezeli `f''(x)` jest bliskie zeru albo wyroznik jest ujemny, obliczenia sa przerywane z komunikatem bledu.
 
@@ -256,9 +256,9 @@ Ladowanie biblioteki odbywa sie w `loadFunctions` z `math/IntervalUtils.cpp` prz
 
 Dla domyslnej funkcji:
 
-```text
+$$
 f(x) = x^2 - 2
-```
+$$
 
 uruchom aplikacje:
 
