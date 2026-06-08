@@ -1,14 +1,14 @@
-# EAN Project - metoda Newtona-Raphsona drugiego rzedu
+# EAN Project - metoda Newtona-Raphsona drugiego rzędu
 
-Projekt jest graficzna aplikacja w C++ do numerycznego wyznaczania pierwiastkow rownan nieliniowych:
+Projekt jest graficzną aplikacją w C++ do numerycznego wyznaczania pierwiastków równań nieliniowych:
 
 ```text
 f(x) = 0
 ```
 
-Aplikacja korzysta z biblioteki Raylib do interfejsu uzytkownika, z MPFR/GMP oraz lokalnej implementacji arytmetyki przedzialowej. Funkcja rozwiazywana przez program jest ladowana z biblioteki dynamicznej `.so`, dlatego mozna zmieniac rownanie bez przebudowy glownej aplikacji.
+Aplikacja korzysta z biblioteki Raylib do interfejsu użytkownika, z MPFR/GMP oraz lokalnej implementacji arytmetyki przedziałowej. Funkcja rozwiązywana przez program jest ładowana z biblioteki dynamicznej `.so`, dlatego można zmieniać równanie bez przebudowy głównej aplikacji.
 
-Domyslna biblioteka funkcji:
+Domyślna biblioteka funkcji:
 
 ```text
 ./build/funcs/func.so
@@ -16,22 +16,22 @@ Domyslna biblioteka funkcji:
 
 ## Tryby pracy
 
-Program udostepnia trzy tryby wybierane przyciskami w oknie aplikacji:
+Program udostępnia trzy tryby wybierane przyciskami w oknie aplikacji:
 
-| Tryb | Dane wejsciowe | Opis |
+| Tryb | Dane wejściowe | Opis |
 | --- | --- | --- |
-| `Real numbers` | liczba rzeczywista, np. `1.5` | Metoda Newtona-Raphsona drugiego rzedu dla punktu startowego `x0`. |
-| `Interval for real numbers` | liczba rzeczywista, np. `1.5` | Punkt `x0` jest zamieniany na punktowy przedzial i dalej liczony metoda przedzialowa. |
-| `Interval for interval numbers` | przedzial, np. `[1, 2]` | Metoda przedzialowa uruchamiana bezposrednio dla zadanego przedzialu. |
+| `Real numbers` | liczba rzeczywista, np. `1.5` | Metoda Newtona-Raphsona drugiego rzędu dla punktu startowego `x0`. |
+| `Interval for real numbers` | liczba rzeczywista, np. `1.5` | Punkt `x0` jest zamieniany na punktowy przedział i dalej liczony metodą przedziałową. |
+| `Interval for interval numbers` | przedział, np. `[1, 2]` | Metoda przedziałowa uruchamiana bezpośrednio dla zadanego przedziału. |
 
-Pola `Epsilon` i `Max iterations` pozwalaja zmienic tolerancje oraz limit iteracji. Domyslnie:
+Pola `Epsilon` i `Max iterations` pozwalają zmienić tolerancję oraz limit iteracji. Domyślnie:
 
-| Parametr | Wartosc |
+| Parametr | Wartość |
 | --- | ---: |
 | `epsilon` | `1e-15` |
 | `MAX_ITER` | `100` |
 
-Okno aplikacji ma rozmiar `1300 x 700` i odswieza sie z docelowa szybkoscia `60 FPS`.
+Okno aplikacji ma rozmiar `1300 x 700` i odświeża się z docelową szybkością `60 FPS`.
 
 ## Budowanie i uruchamianie
 
@@ -47,21 +47,21 @@ Budowanie projektu:
 make
 ```
 
-Uruchomienie z domyslna funkcja:
+Uruchomienie z domyślną funkcją:
 
 ```bash
 ./build/main
 ```
 
-Uruchomienie z wybrana biblioteka funkcji:
+Uruchomienie z wybraną biblioteką funkcji:
 
 ```bash
 ./build/main ./build/funcs/func1.so
 ```
 
-`Makefile` buduje aplikacje oraz przykladowe biblioteki:
+`Makefile` buduje aplikację oraz przykładowe biblioteki:
 
-| Plik zrodlowy | Biblioteka | Funkcja |
+| Plik źródłowy | Biblioteka | Funkcja |
 | --- | --- | --- |
 | `funcs/func.cpp` | `build/funcs/func.so` | `f(x) = x^2 - 2` |
 | `funcs/func1.cpp` | `build/funcs/func1.so` | `f(x) = x^3 - x - 2` |
@@ -76,21 +76,21 @@ make clean
 
 ## Metoda
 
-Program implementuje metode Newtona-Raphsona drugiego rzedu. Dla punktu `x_n` uzywane jest rozwiniecie:
+Program implementuje metodę Newtona-Raphsona drugiego rzędu. Dla punktu `x_n` używane jest rozwinięcie:
 
 
 $$
 f(x_n) + f'(x_n)(x - x_n) + \frac{1}{2}f''(x_n)(x - x_n)^2 = 0
 $$
 
-Po podstawieniu `h = x - x_n` otrzymujemy rownanie kwadratowe:
+Po podstawieniu `h = x - x_n` otrzymujemy równanie kwadratowe:
 
 
 $$
 \frac{1}{2} f''(x_n)h^2 + f'(x_n)h + f(x_n) = 0
 $$
 
-Kolejne przyblizenie jest wyznaczane z kandydatow:
+Kolejne przybliżenie jest wyznaczane z kandydatów:
 
 $$
 x_{n+1}
@@ -102,29 +102,29 @@ f''(x_n)
 }
 $$
 
-Dla liczb rzeczywistych program wybiera kandydata dajacego mniejszy krok wzgledem aktualnego punktu. Jezeli `f''(x)` jest bliskie zeru albo wyroznik jest ujemny, obliczenia sa przerywane z komunikatem bledu.
+Dla liczb rzeczywistych program wybiera kandydata dającego mniejszy krok względem aktualnego punktu. Jeżeli `f''(x)` jest bliskie zeru albo wyróżnik jest ujemny, obliczenia są przerywane z komunikatem błędu.
 
-Dla przedzialow te same operacje sa wykonywane na obiektach `Interval<long double>`. W kazdej iteracji program:
+Dla przedziałów te same operacje są wykonywane na obiektach `Interval<long double>`. W każdej iteracji program:
 
-1. zapamietuje poprzedni przedzial,
-2. liczy srodek przedzialu,
+1. zapamiętuje poprzedni przedział,
+2. liczy środek przedziału,
 3. oblicza `f(m)`, `f'(m)` oraz `f''(X)`,
-4. buduje dwa kandydaty drugiego rzedu,
-5. wybiera kandydata blizszego srodkowi,
-6. sprawdza bezwzgledny i wzgledny warunek stopu.
+4. buduje dwa kandydaty drugiego rzędu,
+5. wybiera kandydata bliższego środkowi,
+6. sprawdza bezwzględny i względny warunek stopu.
 
-Warunki stopu dla przedzialow sprawdzaja zmiane obu koncow przedzialu:
+Warunki stopu dla przedziałów sprawdzają zmianę obu końców przedziału:
 
 ```text
 |a_{k+1} - a_k| < epsilon
 |b_{k+1} - b_k| < epsilon
 ```
 
-oraz wersje wzgledna z przeskalowaniem przez `max(|x|, 1)`.
+oraz wersję względną z przeskalowaniem przez `max(|x|, 1)`.
 
-## Glowne funkcje
+## Główne funkcje
 
-Deklaracje procedur obliczeniowych znajduja sie w `math/Newton.h`, a implementacje w `math/Newton.cpp`.
+Deklaracje procedur obliczeniowych znajdują się w `math/Newton.h`, a implementacje w `math/Newton.cpp`.
 
 ```cpp
 void runNewtonRaphsonReal(
@@ -138,7 +138,7 @@ void runNewtonRaphsonReal(
 );
 ```
 
-Uruchamia metode punktowa dla rzeczywistego punktu startowego `x0`.
+Uruchamia metodę punktową dla rzeczywistego punktu startowego `x0`.
 
 ```cpp
 void runNewtonRaphsonInterval(
@@ -152,7 +152,7 @@ void runNewtonRaphsonInterval(
 );
 ```
 
-Uruchamia metode przedzialowa dla przedzialu startowego `x0`.
+Uruchamia metodę przedziałową dla przedziału startowego `x0`.
 
 ```cpp
 void runNewtonRaphsonFromPoint(
@@ -166,9 +166,9 @@ void runNewtonRaphsonFromPoint(
 );
 ```
 
-Tworzy punktowy przedzial z liczby `x0` i wykonuje obliczenia metoda przedzialowa.
+Tworzy punktowy przedział z liczby `x0` i wykonuje obliczenia metodą przedziałową.
 
-Typy funkcji sa zdefiniowane w `common/Types.h`:
+Typy funkcji są zdefiniowane w `common/Types.h`:
 
 ```cpp
 using RealFn = std::function<long double(long double)>;
@@ -178,21 +178,21 @@ typedef long double (*FnPtr)(long double);
 typedef void (*IVFnPtr)(long double, long double, long double*, long double*);
 ```
 
-## Format danych wejsciowych
+## Format danych wejściowych
 
-W trybie punktowym nalezy wpisac liczbe rzeczywista:
+W trybie punktowym należy wpisać liczbę rzeczywistą:
 
 ```text
 1.5
 ```
 
-W trybie przedzialowym nalezy wpisac przedzial domkniety:
+W trybie przedziałowym należy wpisać przedział domknięty:
 
 ```text
 [1, 2]
 ```
 
-Spacje w zapisie przedzialu sa ignorowane. Bledny format wejscia powoduje wyczyszczenie pola wynikowego i wyswietlenie:
+Spacje w zapisie przedziału są ignorowane. Błędny format wejścia powoduje wyczyszczenie pola wynikowego i wyświetlenie:
 
 ```text
 Error: wrong input format
@@ -200,7 +200,7 @@ Error: wrong input format
 
 ## Wyniki
 
-Wyniki sa wypisywane w komponencie `OutputBox`.
+Wyniki są wypisywane w komponencie `OutputBox`.
 
 Dla trybu `Real numbers` program pokazuje kolejne iteracje i znaleziony pierwiastek:
 
@@ -211,7 +211,7 @@ Iter  2: x=...  step=...
 Root: ...
 ```
 
-Dla trybow przedzialowych program pokazuje kolejne przedzialy, ich szerokosc i krok:
+Dla trybów przedziałowych program pokazuje kolejne przedziały, ich szerokość i krok:
 
 ```text
 Iter  1: [a, b] w=... step=...
@@ -220,7 +220,7 @@ Iter  2: [a, b] w=... step=...
 [a, b] w=...
 ```
 
-Po przekroczeniu limitu iteracji wypisywany jest aktualny przedzial:
+Po przekroczeniu limitu iteracji wypisywany jest aktualny przedział:
 
 ```text
 Max iterations reached.
@@ -229,7 +229,7 @@ Current interval: [a, b]
 
 ## Biblioteki funkcji
 
-Biblioteka dynamiczna z funkcja musi eksportowac szesc symboli C:
+Biblioteka dynamiczna z funkcją musi eksportować sześć symboli C:
 
 ```cpp
 extern "C" {
@@ -250,25 +250,25 @@ Znaczenie symboli:
 | `f` | funkcja rzeczywista |
 | `df` | pierwsza pochodna funkcji rzeczywistej |
 | `ddf` | druga pochodna funkcji rzeczywistej |
-| `f_iv` | przedzialowa ocena funkcji na `[a, b]` |
-| `df_iv` | przedzialowa ocena pierwszej pochodnej na `[a, b]` |
-| `ddf_iv` | przedzialowa ocena drugiej pochodnej na `[a, b]` |
+| `f_iv` | przedziałowa ocena funkcji na `[a, b]` |
+| `df_iv` | przedziałowa ocena pierwszej pochodnej na `[a, b]` |
+| `ddf_iv` | przedziałowa ocena drugiej pochodnej na `[a, b]` |
 
-Funkcje przedzialowe przyjmuja konce przedzialu `a`, `b`, a wynik zwracaja przez wskazniki `ra`, `rb`.
+Funkcje przedziałowe przyjmują końce przedziału `a`, `b`, a wynik zwracają przez wskaźniki `ra`, `rb`.
 
-Ladowanie biblioteki odbywa sie w `loadFunctions` z `math/IntervalUtils.cpp` przez `dlopen` i `dlsym`. Jezeli biblioteka podana w argumencie programu nie zostanie zaladowana, aplikacja probuje wrocic do `./build/funcs/func.so`.
+Ładowanie biblioteki odbywa się w `loadFunctions` z `math/IntervalUtils.cpp` przez `dlopen` i `dlsym`. Jeżeli biblioteka podana w argumencie programu nie zostanie załadowana, aplikacja próbuje wrócić do `./build/funcs/func.so`.
 
-## Przyklady
+## Przykłady
 
 ### Liczby rzeczywiste
 
-Dla domyslnej funkcji:
+Dla domyślnej funkcji:
 
 $$
 f(x) = x^2 - 2
 $$
 
-uruchom aplikacje:
+uruchom aplikację:
 
 ```bash
 make
@@ -281,13 +281,13 @@ Wybierz `Real numbers` i wpisz:
 1.5
 ```
 
-Oczekiwany wynik to przyblizenie:
+Oczekiwany wynik to przybliżenie:
 
 ```text
 Root: 1.414213562373095...
 ```
 
-### Przedzial
+### Przedział
 
 Dla tej samej funkcji wybierz `Interval for interval numbers` i wpisz:
 
@@ -295,11 +295,11 @@ Dla tej samej funkcji wybierz `Interval for interval numbers` i wpisz:
 [1, 2]
 ```
 
-Program powinien zwezac przedzial do otoczenia dodatniego pierwiastka:
+Program powinien zwężać przedział do otoczenia dodatniego pierwiastka:
 
 ```text
 --- Interval root: ---
 [1.41421356237309..., 1.41421356237310...] w=...
 ```
 
-Dokladne konce przedzialu moga zalezec od zaokraglen i kolejnych iteracji.
+Dokładne końce przedziału mogą zależeć od zaokrągleń i kolejnych iteracji.
