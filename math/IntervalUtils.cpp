@@ -27,7 +27,7 @@ Interval<long double> ParseInterval(const string& input) {
 
         return I;
     } else {
-        return I;
+        throw runtime_error("Incorrect formating no opening and/or closing bracket");
     }
 }
 

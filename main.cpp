@@ -10,7 +10,7 @@
 #include <string>
 using namespace std;
 
-const int SCREEN_W = 1300;
+const int SCREEN_W = 1400;
 const int SCREEN_H = 700;
 
 int main(int argc, char* argv[]) {
@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     InputBox  input = {{400, 100, 200, 40 }, "", false, 32};
     InputBox  eps_box = {{650, 100, 200, 40}, "", false, 32};
     InputBox  iter_box = {{900, 100, 200, 40}, "", false, 32};
-    OutputBox output = {{ }, { }, { 400, 200, 800, 400 }};
+    OutputBox output = {{}, {}, { 400, 200, 900, 400 }};
 
     enum class Mode { Real, IntervalFromReal, IntervalFromInterval };
     Mode currentMode = Mode::Real;
@@ -80,8 +80,35 @@ int main(int argc, char* argv[]) {
         string pushed_eps = eps_box.PushValue();
         string pushed_iter = iter_box.PushValue();
 
-        if (!pushed_eps.empty()) epsilon = stold(pushed_eps);
-        if (!pushed_iter.empty()) MAX_ITER = stoi(pushed_iter);
+        if (!pushed_eps.empty()) {
+            try {
+                size_t pos;
+                epsilon = std::stold(pushed_eps, &pos);
+
+                if (pos != pushed_eps.size()) {
+                    throw std::invalid_argument("extra characters");
+                }
+            } catch (const std::exception&) {
+                output.Clear();
+                output.Add("Error: wrong input format");
+                return -1;
+            }
+        }
+
+        if (!pushed_iter.empty()) {
+            try {
+                size_t pos;
+                MAX_ITER = std::stoi(pushed_iter, &pos);
+
+                if (pos != pushed_iter.size()) {
+                    throw std::invalid_argument("extra characters");
+                }
+            } catch (const std::exception&) {
+                output.Clear();
+                output.Add("Error: wrong input format");
+                return -1;
+            }
+        }
 
         if (!pushed_input.empty()) {
             try {

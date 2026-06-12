@@ -1,10 +1,6 @@
 # EAN Project - metoda Newtona-Raphsona drugiego rzędu
 
-Projekt jest graficzną aplikacją w C++ do numerycznego wyznaczania pierwiastków równań nieliniowych:
-
-```text
-f(x) = 0
-```
+Projekt jest graficzną aplikacją w C++ do numerycznego wyznaczania pierwiastków równań nieliniowych o postaci: `f(x) = 0`
 
 Aplikacja korzysta z biblioteki Raylib do interfejsu użytkownika, z MPFR/GMP oraz lokalnej implementacji arytmetyki przedziałowej. Funkcja rozwiązywana przez program jest ładowana z biblioteki dynamicznej `.so`, dlatego można zmieniać równanie bez przebudowy głównej aplikacji.
 
@@ -20,9 +16,9 @@ Program udostępnia trzy tryby wybierane przyciskami w oknie aplikacji:
 
 | Tryb | Dane wejściowe | Opis |
 | --- | --- | --- |
-| `Real numbers` | liczba rzeczywista, np. `1.5` | Metoda Newtona-Raphsona drugiego rzędu dla punktu startowego `x0`. |
-| `Interval for real numbers` | liczba rzeczywista, np. `1.5` | Punkt `x0` jest zamieniany na punktowy przedział i dalej liczony metodą przedziałową. |
-| `Interval for interval numbers` | przedział, np. `[1, 2]` | Metoda przedziałowa uruchamiana bezpośrednio dla zadanego przedziału. |
+| `Real numbers` | liczba rzeczywista | Metoda Newtona-Raphsona drugiego rzędu dla punktu startowego `x0`. |
+| `Interval for real numbers` | liczba rzeczywista | Punkt `x0` jest zamieniany na punktowy przedział i dalej liczony metodą przedziałową. |
+| `Interval for interval numbers` | przedział | Metoda przedziałowa uruchamiana bezpośrednio dla zadanego przedziału. |
 
 Pola `Epsilon` i `Max iterations` pozwalają zmienić tolerancję oraz limit iteracji. Domyślnie:
 
@@ -31,7 +27,7 @@ Pola `Epsilon` i `Max iterations` pozwalają zmienić tolerancję oraz limit ite
 | `epsilon` | `1e-15` |
 | `MAX_ITER` | `100` |
 
-Okno aplikacji ma rozmiar `1300 x 700` i odświeża się z docelową szybkością `60 FPS`.
+Okno aplikacji ma rozmiar `1400 x 700` i odświeża się z docelową szybkością `60 FPS`.
 
 ## Budowanie i uruchamianie
 
@@ -68,12 +64,6 @@ Uruchomienie z wybraną biblioteką funkcji:
 | `funcs/func2.cpp` | `build/funcs/func2.so` | `f(x) = cos(x) - x` |
 | `funcs/func3.cpp` | `build/funcs/func3.so` | `f(x) = sin(x)^2 + 0.5sin(x) - 0.5` |
 
-Czyszczenie katalogu budowania:
-
-```bash
-make clean
-```
-
 ## Metoda
 
 Program implementuje metodę Newtona-Raphsona drugiego rzędu. Dla punktu `x_n` używane jest rozwinięcie:
@@ -102,7 +92,7 @@ f''(x_n)
 }
 $$
 
-Dla liczb rzeczywistych program wybiera kandydata dającego mniejszy krok względem aktualnego punktu. Jeżeli `f''(x)` jest bliskie zeru albo wyróżnik jest ujemny, obliczenia są przerywane z komunikatem błędu.
+Dla liczb rzeczywistych program wybiera kandydata dającego mniejszy krok względem aktualnego punktu. Jeżeli `f''(x)` jest bliska zeru albo wyróżnik jest ujemny, obliczenia są przerywane z komunikatem błędu.
 
 Dla przedziałów te same operacje są wykonywane na obiektach `Interval<long double>`. W każdej iteracji program:
 
@@ -250,9 +240,9 @@ Znaczenie symboli:
 | `f` | funkcja rzeczywista |
 | `df` | pierwsza pochodna funkcji rzeczywistej |
 | `ddf` | druga pochodna funkcji rzeczywistej |
-| `f_iv` | przedziałowa ocena funkcji na `[a, b]` |
-| `df_iv` | przedziałowa ocena pierwszej pochodnej na `[a, b]` |
-| `ddf_iv` | przedziałowa ocena drugiej pochodnej na `[a, b]` |
+| `f_iv` | funkcja przedziałowa |
+| `df_iv` | pierwsza pochodna funkcji przedziałowej |
+| `ddf_iv` | druga pochodna funkcji przedziałowej |
 
 Funkcje przedziałowe przyjmują końce przedziału `a`, `b`, a wynik zwracają przez wskaźniki `ra`, `rb`.
 
@@ -295,7 +285,7 @@ Dla tej samej funkcji wybierz `Interval for interval numbers` i wpisz:
 [1, 2]
 ```
 
-Program powinien zwężać przedział do otoczenia dodatniego pierwiastka:
+Program powinien znaleźć przedział otaczający dodatni pierwiastek:
 
 ```text
 --- Interval root: ---

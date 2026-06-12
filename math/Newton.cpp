@@ -63,6 +63,10 @@ bool StopIntervalRelative(Interval<long double>& old, Interval<long double>& x, 
     return leftStep / leftScale < epsilon && rightStep / rightScale < epsilon;
 }
 
+///////////////////////////
+// Real numbers function //
+///////////////////////////
+
 void runNewtonRaphsonReal(
      long double x0, 
      RealFn f,
@@ -102,13 +106,13 @@ void runNewtonRaphsonReal(
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
-           << ": x=" << fixed << setprecision(10) << xn
-           << "  step=" << scientific << setprecision(2) << step;
+           << ": x = " << fixed << setprecision(10) << xn
+           << "  step =" << scientific << setprecision(2) << step;
         out.Add(ss.str());
 
         x = xn;
 
-        if (step < 1e-15L || step / max(fabsl(x), 1.0L) < epsilon) {
+        if (step < epsilon || step / max(fabsl(x), 1.0L) < epsilon) {
             ostringstream root;
             root << scientific << setprecision(20) << x;
             out.Add("--- Roots: ---");
@@ -119,6 +123,9 @@ void runNewtonRaphsonReal(
     out.Add("Max iterations reached.");
 }
 
+//////////////////////////////////////
+// Interval from intervals function //
+//////////////////////////////////////
 
 void runNewtonRaphsonInterval(
      Interval<long double> x0,
@@ -194,8 +201,8 @@ void runNewtonRaphsonInterval(
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
            << ": " << FormatInterval(x)
-           << " w=" << scientific << setprecision(2) << IntWidth(x)
-           << " step=" << step;
+           << " w = " << scientific << setprecision(2) << IntWidth(x)
+           << " step = " << step;
 
         out.Add(ss.str());
 
@@ -204,7 +211,7 @@ void runNewtonRaphsonInterval(
             ostringstream ss;
             out.Add("--- Interval root: ---");
             ss << FormatInterval(x)
-               << " w=" << scientific << setprecision(2) << IntWidth(x);
+               << " w = " << scientific << setprecision(2) << IntWidth(x);
             out.Add(ss.str());
             return;
         }
@@ -214,6 +221,9 @@ void runNewtonRaphsonInterval(
     out.Add("Current interval: " + FormatInterval(x));
 }
 
+//////////////////////////////////
+// Interval from point function //
+//////////////////////////////////
 
 void runNewtonRaphsonFromPoint(
      long double x0,
@@ -271,8 +281,8 @@ void runNewtonRaphsonFromPoint(
         Interval<long double> x1 = m - (dfm - sp) / ddfx;
         Interval<long double> x2 = m - (dfm + sp) / ddfx;
 
-        long double d1 = fabsl(x1.Mid() - mid);
-        long double d2 = fabsl(x2.Mid() - mid);
+        long double d1 = DistanceToInterval(mid, x1);
+        long double d2 = DistanceToInterval(mid, x2);
 
         Interval<long double> xn = (d1 <= d2) ? x1 : x2;
 
@@ -283,21 +293,24 @@ void runNewtonRaphsonFromPoint(
             fabsl(x.b - old.b)
         );
 
+        long double scale = max(fabsl(x.Mid()), 1.0L);
+        long double tol = epsilon * scale;
+
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
            << ": " << FormatInterval(x)
-           << " w=" << scientific << setprecision(2) << IntWidth(x)
+           << " w = " << scientific << setprecision(2) << IntWidth(x)
            << " step = " << step;
 
         out.Add(ss.str());
 
         if (StopInterval(old, x, epsilon) || StopIntervalRelative(old, x, epsilon)) 
         {
-            ostringstream root;
+            ostringstream ss;
             out.Add("--- Interval root: ---");
-            root << FormatInterval(x)
-                 << " w=" << scientific << setprecision(2) << IntWidth(x);
-            out.Add(root.str());
+            ss << FormatInterval(x)
+               << " w = " << scientific << setprecision(2) << IntWidth(x);
+            out.Add(ss.str());
             return;
         }
     }
