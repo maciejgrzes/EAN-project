@@ -106,7 +106,7 @@ void runNewtonRaphsonReal(
 
         ostringstream ss;
         ss << "Iter " << setw(2) << i + 1
-           << ": x = " << fixed << setprecision(10) << xn
+           << ": x = " << fixed << setprecision(20) << xn
            << "  step =" << scientific << setprecision(2) << step;
         out.Add(ss.str());
 
