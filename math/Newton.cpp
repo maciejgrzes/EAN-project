@@ -39,9 +39,7 @@ Interval<long double> PointInterval(long double x) {
 
     string s = ss.str();
 
-    Interval<long double> r;
-    r.a = LeftRead<long double>(s);
-    r.b = RightRead<long double>(s);
+    Interval<long double> r = IntRead<long double>(s);
 
     return r;
 }
@@ -141,104 +139,6 @@ void runNewtonRaphsonInterval(
     const Interval<long double> two = IntRead<long double>("2");
 
     Interval<long double> x = x0;
-
-    for (int i = 0; i < MAX_ITER; i++) {
-        Interval<long double> old = x;
-
-        long double mid = old.Mid();
-        Interval<long double> m = PointInterval(mid);
-
-        Interval<long double> fm   = f(m);
-        Interval<long double> dfm  = df(m);
-        Interval<long double> ddfx = ddf(old);
-
-        if (ContainsZero(ddfx)) {
-            out.Add("Error: f''(x) contains 0, division by 0.");
-            out.Add("Current interval: " + FormatInterval(old));
-            return;
-        }
-
-        Interval<long double> disc = (dfm * dfm) - (two * fm * ddfx);
-
-        if (disc.b < 0.0L) {
-            out.Add("Error: discriminant is strictly negative, no real solution.");
-            out.Add("disc = " + FormatInterval(disc));
-            out.Add("Current interval: " + FormatInterval(old));
-            return;
-        }
-
-        Interval<long double> discClipped;
-        discClipped.a = max(0.0L, disc.a);
-        discClipped.b = disc.b;
-
-        int st = 0;
-        Interval<long double> sp = ISqrt(discClipped, st);
-
-        if (st != 0) {
-            out.Add("Error: could not compute sqrt(discriminant).");
-            out.Add("disc = " + FormatInterval(disc));
-            return;
-        }
-
-        Interval<long double> x1 = m - (dfm - sp) / ddfx;
-        Interval<long double> x2 = m - (dfm + sp) / ddfx;
-
-        long double d1 = DistanceToInterval(mid, x1);
-        long double d2 = DistanceToInterval(mid, x2);
-
-        Interval<long double> xn = (d1 <= d2) ? x1 : x2;
-
-        x = xn;
-
-        long double step = max(
-            fabsl(x.a - old.a),
-            fabsl(x.b - old.b)
-        );
-
-        long double scale = max(fabsl(x.Mid()), 1.0L);
-        long double tol = epsilon * scale;
-
-        ostringstream ss;
-        ss << "Iter " << setw(2) << i + 1
-           << ": " << FormatInterval(x)
-           << " w = " << scientific << setprecision(2) << IntWidth(x)
-           << " step = " << step;
-
-        out.Add(ss.str());
-
-        if (StopInterval(old, x, epsilon) || StopIntervalRelative(old, x, epsilon)) 
-        {
-            ostringstream ss;
-            out.Add("--- Interval root: ---");
-            ss << FormatInterval(x)
-               << " w = " << scientific << setprecision(2) << IntWidth(x);
-            out.Add(ss.str());
-            return;
-        }
-    }
-
-    out.Add("Max iterations reached.");
-    out.Add("Current interval: " + FormatInterval(x));
-}
-
-//////////////////////////////////
-// Interval from point function //
-//////////////////////////////////
-
-void runNewtonRaphsonFromPoint(
-     long double x0,
-     IntervalFn f,
-     IntervalFn df,
-     IntervalFn ddf,
-     OutputBox& out,
-     const int MAX_ITER,
-     long double epsilon) 
-{
-    out.Clear();
-
-    const Interval<long double> two = IntRead<long double>("2");
-
-    Interval<long double> x = PointInterval(x0);
 
     for (int i = 0; i < MAX_ITER; i++) {
         Interval<long double> old = x;

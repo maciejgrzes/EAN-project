@@ -1,4 +1,5 @@
 #include "common/Types.h"
+#include "libs/Interval.h"
 #include "math/IntervalUtils.h"
 #include "math/Newton.h"
 #include "ui/Button.h"
@@ -117,8 +118,8 @@ int main(int argc, char* argv[]) {
                     runNewtonRaphsonReal(x0, f, df, ddf, output, MAX_ITER, epsilon);
                 }
                 else if (currentMode == Mode::IntervalFromReal) {
-                    long double x0 = stold(pushed_input);
-                    runNewtonRaphsonFromPoint(x0, f_iv, df_iv, ddf_iv, output, MAX_ITER, epsilon);
+                    Interval<long double> x0 = IntRead<long double>(pushed_input);
+                    runNewtonRaphsonInterval(x0, f_iv, df_iv, ddf_iv, output, MAX_ITER, epsilon);
                 }
                 else {
                     Interval<long double> x0 = ParseInterval(pushed_input);

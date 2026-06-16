@@ -144,20 +144,6 @@ void runNewtonRaphsonInterval(
 
 Uruchamia metodę przedziałową dla przedziału startowego `x0`.
 
-```cpp
-void runNewtonRaphsonFromPoint(
-    long double x0,
-    IntervalFn f,
-    IntervalFn df,
-    IntervalFn ddf,
-    OutputBox& out,
-    int MAX_ITER,
-    long double epsilon
-);
-```
-
-Tworzy punktowy przedział z liczby `x0` i wykonuje obliczenia metodą przedziałową.
-
 Typy funkcji są zdefiniowane w `common/Types.h`:
 
 ```cpp
